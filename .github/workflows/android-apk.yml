@@ -26,11 +26,11 @@ jobs:
               raise SystemExit("file_picker Android Gradle file not found")
           for path in matches:
               source = path.read_text()
-              source = re.sub(r"(?m)^\\s*id\\s*['\"]org\\.jetbrains\\.kotlin\\.android['\"]\\s*;?\\s*\\n", "", source)
-              source = re.sub(r"(?m)^\\s*id\\s*['\"]kotlin-android['\"]\\s*;?\\s*\\n", "", source)
-              source = re.sub(r"(?m)^\\s*apply plugin:\\s*['\"]kotlin-android['\"]\\s*\\n", "", source)
-              if not re.search(r"(?m)^\\s*compileSdk(?:Version)?\\s+", source):
-                  source = re.sub(r"(android\\s*\\{)", r"\\1\\n    compileSdk 36", source, count=1)
+              source = re.sub(r"(?m)^\s*id\s*['\"]org\.jetbrains\.kotlin\.android['\"]\s*;?\s*\n", "", source)
+              source = re.sub(r"(?m)^\s*id\s*['\"]kotlin-android['\"]\s*;?\s*\n", "", source)
+              source = re.sub(r"(?m)^\s*apply plugin:\s*['\"]kotlin-android['\"]\s*\n", "", source)
+              if not re.search(r"(?m)^\s*compileSdk(?:Version)?\s+", source):
+                  source = re.sub(r"(android\s*\{)", r"\1\n    compileSdk 36", source, count=1)
               path.write_text(source)
               print(f"Patched {path}")
           PY
