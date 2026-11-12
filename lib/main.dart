@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:excel/excel.dart';
+// ignore_for_file: deprecated_member_use, unused_local_variable, library_private_types_in_public_api
+import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
