@@ -87,23 +87,6 @@ class _AppState extends State<App> {
   }catch(_){msg('فایل اکسل قابل خواندن نیست');}
  }
  Future<void> chooseFont() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],withData:true);if(f==null||f.files.single.bytes==null)return;try{fontBytes=f.files.single.bytes;await loadFont(fontBytes!);setState(()=>family='UserFont');await save();}catch(_){msg('فایل فونت معتبر نیست');}}
- Future<void> textSettings() async {
-  final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
-  await showModalBottomSheet(context:ctx,isScrollControlled:true,showDragHandle:true,builder:(c)=>StatefulBuilder(builder:(c,refresh)=>Padding(padding:const EdgeInsets.fromLTRB(20,12,20,28),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   const Text('فونت و اندازه نوشته‌ها',style:TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-   const SizedBox(height:12),
-   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.font_download),title:const Text('انتخاب فونت اختصاصی'),subtitle:Text(fontBytes==null?'فونت پیش‌فرض':'فونت اختصاصی فعال است'),trailing:const Icon(Icons.chevron_left),onTap:()async{await chooseFont();refresh((){});}),
-   const Divider(),
-   Text('اندازه متن‌های برنامه: ${size.round()}'),
-   Slider(value:size,min:12,max:25,divisions:13,label:size.round().toString(),onChanged:(v){setState(()=>size=v);refresh((){});save();}),
-   const SizedBox(height:8),
-   Text('اندازه متن‌های ورودی: ${inputSize.round()}'),
-   Slider(value:inputSize,min:12,max:25,divisions:13,label:inputSize.round().toString(),onChanged:(v){setState(()=>inputSize=v);refresh((){});save();}),
-   const SizedBox(height:8),
-   const Text('نمونه متن ورودی'),
-   TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'متن نمونه را اینجا ببینید',border:OutlineInputBorder())),
-  ]))));
- }
  Future<void> settings() async {
   final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   await showModalBottomSheet(context:ctx,isScrollControlled:true,showDragHandle:true,builder:(c)=>StatefulBuilder(builder:(c,refresh)=>SafeArea(child:SingleChildScrollView(padding:EdgeInsets.fromLTRB(20,12,20,MediaQuery.of(c).viewInsets.bottom+24),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
