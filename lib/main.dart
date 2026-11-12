@@ -1,43 +1,74 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(MyApp());
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      // Application name
-      title: 'Flutter Hello World',
-      // Application theme data, you can set the colors for the application as
-      // you want
-      theme: ThemeData(
-        // useMaterial3: false,
-        primarySwatch: Colors.blue,
-      ),
-      // A widget which will be started on application startup
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
+void main() async { WidgetsFlutterBinding.ensureInitialized(); runApp(const App()); }
+String uid() => DateTime.now().microsecondsSinceEpoch.toString();
+class Item {
+ String id,text; bool done;
+ Item(this.id,this.text,{this.done=false});
+ Map<String,dynamic> toJson()=>{'id':id,'text':text,'done':done};
+ factory Item.from(Map m)=>Item((m['id']??uid()).toString(),(m['text']??m['title']??m['name']??'').toString(),done:m['done']==true||m['completed']==true);
 }
-
-class MyHomePage extends StatelessWidget {
-  final String title;
-  const MyHomePage({super.key, required this.title});  
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // The title text which will be shown on the action bar
-        title: Text(title),
-      ),
-      body: Center(
-        child: Text(
-          'Hello, World!',
-        ),
-      ),
-    );
-  }
+class Folder { String id,name; Folder(this.id,this.name); Map<String,dynamic> toJson()=>{'id':id,'name':name}; }
+class Board {
+ String id,title,folderId; List<Item> items;
+ Board(this.id,this.title,this.folderId,[List<Item>? items]):items=items??[];
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'folderId':folderId,'items':items.map((e)=>e.toJson()).toList()};
+ factory Board.from(Map m)=>Board((m['id']??uid()).toString(),(m['title']??m['name']??'چک‌لیست').toString(),(m['folderId']??m['folder_id']??'').toString(),((m['items']??m['tasks']??m['checks']??[]) as List).whereType<Map>().map(Item.from).toList());
+}
+class App extends StatefulWidget { const App({super.key}); @override State<App> createState()=>_AppState(); }
+class _AppState extends State<App> {
+ final auth=LocalAuthentication(); List<Folder> folders=[]; List<Board> boards=[];
+ bool ready=false,locked=false,biometric=false; double size=15; String family='Vazirmatn'; Uint8List? fontBytes;
+ @override void initState(){super.initState();load();}
+ Future<void> load() async {
+  final p=await SharedPreferences.getInstance();
+  try {
+   folders=(jsonDecode(p.getString('folders')??'[]') as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??'').toString())).toList();
+   boards=(jsonDecode(p.getString('boards')??'[]') as List).whereType<Map>().map(Board.from).toList();
+   size=p.getDouble('size')??15; biometric=p.getBool('bio')??false;
+   final raw=p.getString('font'); if(raw!=null){fontBytes=base64Decode(raw);await loadFont(fontBytes!);family='UserFont';}
+  } catch (_) {}
+  if(mounted)setState(()=>ready=true);
+  if(biometric){locked=true;setState((){});unlock();}
+ }
+ Future<void> save() async {final p=await SharedPreferences.getInstance();await p.setString('folders',jsonEncode(folders.map((e)=>e.toJson()).toList()));await p.setString('boards',jsonEncode(boards.map((e)=>e.toJson()).toList()));await p.setDouble('size',size);await p.setBool('bio',biometric);if(fontBytes!=null)await p.setString('font',base64Encode(fontBytes!));}
+ Future<void> loadFont(Uint8List b) async {final l=FontLoader('UserFont')..addFont(Future.value(ByteData.sublistView(b)));await l.load();}
+ void msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+ Future<void> unlock() async {try{final ok=await auth.authenticate(localizedReason:'برای ورود هویت خود را تأیید کنید',options:const AuthenticationOptions(biometricOnly:false,stickyAuth:true));if(mounted&&ok)setState(()=>locked=false);}catch(_){msg('احراز هویت در دسترس نیست');}}
+ Future<String?> pickName(String title,[String initial='']) async {final c=TextEditingController(text:initial);return showDialog<String>(context:context,builder:(d)=>AlertDialog(title:Text(title),content:TextField(controller:c,autofocus:true),actions:[TextButton(onPressed:()=>Navigator.pop(d),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(d,c.text.trim()),child:const Text('ذخیره'))]));}
+ Future<void> addFolder() async {final s=await pickName('پوشه جدید');if(s!=null&&s.isNotEmpty){setState(()=>folders.add(Folder(uid(),s)));save();}}
+ Future<void> addBoard(String folder) async {final s=await pickName('چک‌لیست جدید');if(s!=null&&s.isNotEmpty){setState(()=>boards.add(Board(uid(),s,folder)));save();}}
+ Future<void> backupOut() async {final data={'format':'checklist-backup','version':2,'folders':folders.map((e)=>e.toJson()).toList(),'boards':boards.map((e)=>e.toJson()).toList()};final d=await getTemporaryDirectory();final f=File('\${d.path}/checklist-backup.json');await f.writeAsString(const JsonEncoder.withIndent('  ').convert(data));await Share.shareXFiles([XFile(f.path)],text:'پشتیبان چک‌یار');}
+ Future<void> backupIn() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['json','bak','txt'],withData:true);if(f==null)return;try{final b=f.files.single.bytes??await File(f.files.single.path!).readAsBytes();final x=jsonDecode(utf8.decode(b));final fm=x is Map?(x['folders']??x['categories']??[]):[];final bm=x is List?x:x is Map?(x['boards']??x['lists']??x['checklists']??x['data']??[]):[];final nf=(fm as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??m['title']??'پوشه').toString())).toList();final nb=(bm as List).whereType<Map>().map(Board.from).toList();if(nf.isEmpty&&nb.isEmpty)throw Exception();setState((){folders=nf;boards=nb;});await save();msg('بازیابی انجام شد');}catch(_){msg('فایل پشتیبان معتبر یا سازگار نیست');}}
+ Future<void> excelOut([String? folder]) async {final e=Excel.createExcel();final s=e['چک‌لیست‌ها'];s.appendRow(['پوشه','چک‌لیست','مورد','انجام شده'].map((v)=>TextCellValue(v)).toList());for(final b in boards.where((x)=>folder==null||x.folderId==folder)){final fn=folders.where((x)=>x.id==b.folderId).firstOrNull?.name??'بدون پوشه';for(final i in b.items){s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(i.text),TextCellValue(i.done?'بله':'خیر')]);}if(b.items.isEmpty)s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(''),TextCellValue('')]);}final bytes=e.encode();if(bytes==null)return;final d=await getTemporaryDirectory();final f=File('\${d.path}/checklists.xlsx');await f.writeAsBytes(bytes);await Share.shareXFiles([XFile(f.path)],text:'خروجی اکسل');}
+ Future<void> excelIn() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','xls'],withData:true);if(f==null||f.files.single.bytes==null)return;try{final e=Excel.decodeBytes(f.files.single.bytes!);final sh=e.tables.values.first;final grouped=<String,List<String>>{};for(var r=1;r<sh.rows.length;r++){final row=sh.rows[r];String v(int n)=>n<row.length?(row[n]?.value?.toString().trim()??''):'';final title=v(1).isEmpty?'واردشده از اکسل':v(1);final item=v(2).isEmpty?v(0):v(2);if(item.isNotEmpty)grouped.putIfAbsent(title,()=>[]).add(item);}if(grouped.isEmpty){for(var r=1;r<sh.rows.length;r++){final t=sh.rows[r].map((c)=>c?.value?.toString()??'').where((x)=>x.trim().isNotEmpty).join(' ');if(t.isNotEmpty)grouped.putIfAbsent('واردشده از اکسل',()=>[]).add(t);}}setState(()=>boards.addAll(grouped.entries.map((e)=>Board(uid(),e.key,'',e.value.map((t)=>Item(uid(),t)).toList()))));await save();msg('ورود اکسل انجام شد');}catch(_){msg('فایل اکسل قابل خواندن نیست');}}
+ Future<void> chooseFont() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],withData:true);if(f==null||f.files.single.bytes==null)return;try{fontBytes=f.files.single.bytes;await loadFont(fontBytes!);setState(()=>family='UserFont');await save();}catch(_){msg('فایل فونت معتبر نیست');}}
+ Future<void> settings() async {await showModalBottomSheet(context:context,isScrollControlled:true,showDragHandle:true,builder:(c)=>StatefulBuilder(builder:(c,refresh)=>Padding(padding:const EdgeInsets.all(20),child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('تنظیمات',style:TextStyle(fontSize:20,fontWeight:FontWeight.bold)),Text('اندازه فونت: \${size.round()}'),Slider(value:size,min:12,max:25,divisions:13,onChanged:(v){setState(()=>size=v);refresh((){});save();}),ListTile(leading:const Icon(Icons.font_download),title:const Text('افزودن فونت دلخواه'),onTap:()async{await chooseFont();refresh((){});}),SwitchListTile(value:biometric,title:const Text('قفل اثر انگشت / بیومتریک'),onChanged:(v)async{if(v){try{if(!await auth.isDeviceSupported()){msg('قفل گوشی پشتیبانی نمی‌شود');return;}if(!await auth.authenticate(localizedReason:'فعال‌سازی قفل برنامه'))return;}catch(_){return;}}setState(()=>biometric=v);await save();refresh((){});}),ListTile(leading:const Icon(Icons.backup),title:const Text('خروجی پشتیبان'),onTap:(){Navigator.pop(c);backupOut();}),ListTile(leading:const Icon(Icons.restore),title:const Text('بازیابی پشتیبان'),onTap:(){Navigator.pop(c);backupIn();}),ListTile(leading:const Icon(Icons.upload_file),title:const Text('ورود از اکسل'),onTap:(){Navigator.pop(c);excelIn();}),ListTile(leading:const Icon(Icons.download),title:const Text('خروجی اکسل'),onTap:(){Navigator.pop(c);excelOut();})]))));}
+ @override Widget build(BuildContext context){final theme=ThemeData(useMaterial3:true,colorScheme:ColorScheme.fromSeed(seedColor:const Color(0xFF6658D3)),scaffoldBackgroundColor:const Color(0xFFF5F6FA),fontFamily:family);return MaterialApp(debugShowCheckedModeBanner:false,theme:theme,builder:(c,w)=>Directionality(textDirection:ui.TextDirection.rtl,child:MediaQuery(data:MediaQuery.of(c).copyWith(textScaler:TextScaler.linear(size/15)),child:w!)),home:!ready?const Scaffold(body:Center(child:CircularProgressIndicator())):locked?Scaffold(body:Center(child:FilledButton.icon(onPressed:unlock,icon:const Icon(Icons.fingerprint),label:const Text('باز کردن برنامه')))):Home(owner:this));}
+}
+class Home extends StatefulWidget {final _AppState owner;const Home({super.key,required this.owner});@override State<Home> createState()=>_HomeState();}
+class _HomeState extends State<Home>{
+ String? folder;
+ Future<void> addItem(Board b)async{final s=await widget.owner.pickName('مورد جدید');if(s!=null&&s.isNotEmpty){setState(()=>b.items.add(Item(uid(),s)));widget.owner.save();}}
+ @override Widget build(BuildContext context){final o=widget.owner;final inside=folder!=null;final lists=o.boards.where((b)=>b.folderId==(folder??'')).toList();final done=o.boards.fold<int>(0,(a,b)=>a+b.items.where((i)=>i.done).length);final total=o.boards.fold<int>(0,(a,b)=>a+b.items.length);return Scaffold(appBar:AppBar(title:Text(inside?(o.folders.where((f)=>f.id==folder).firstOrNull?.name??'پوشه'):'چک‌یار',style:const TextStyle(fontWeight:FontWeight.bold)),leading:inside?IconButton(onPressed:()=>setState(()=>folder=null),icon:const Icon(Icons.arrow_back)):null,actions:[IconButton(onPressed:o.settings,icon:const Icon(Icons.tune))]),floatingActionButton:FloatingActionButton.extended(onPressed:inside?()=>o.addBoard(folder!):o.addFolder,icon:Icon(inside?Icons.add:Icons.create_new_folder),label:Text(inside?'چک‌لیست جدید':'پوشه جدید')),body:ListView(padding:const EdgeInsets.all(18),children:[
+ if(!inside)Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF7569E0),Color(0xFF5144B8)]),borderRadius:BorderRadius.circular(22)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('همه کارها، مرتب و آماده',style:TextStyle(color:Colors.white70)),const SizedBox(height:8),const Text('برنامه‌ریزی ساده‌تر با چک‌یار',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:16),Text(' \${o.boards.length} چک‌لیست     $done از $total مورد انجام شده',style:const TextStyle(color:Colors.white))])),
+ const SizedBox(height:22),Row(children:[Expanded(child:Text(inside?'چک‌لیست‌ها':'پوشه‌ها',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),Text(inside?'\${lists.length}':'\${o.folders.length}')]),
+ if(!inside&&o.folders.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:Text('برای شروع یک پوشه بساز'))),
+ if(!inside)GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:o.folders.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,childAspectRatio:1.55,crossAxisSpacing:12,mainAxisSpacing:12),itemBuilder:(c,i){final f=o.folders[i];final n=o.boards.where((b)=>b.folderId==f.id).length;return InkWell(borderRadius:BorderRadius.circular(18),onTap:()=>setState(()=>folder=f.id),onLongPress:()=>showModalBottomSheet(context:context,builder:(c)=>Wrap(children:[ListTile(leading:const Icon(Icons.edit),title:const Text('ویرایش'),onTap:()async{Navigator.pop(c);final s=await o.pickName('نام پوشه',f.name);if(s!=null&&s.isNotEmpty){setState(()=>f.name=s);o.save();}}),ListTile(leading:const Icon(Icons.delete),title:const Text('حذف پوشه'),onTap:(){Navigator.pop(c);setState((){for(final b in o.boards){if(b.folderId==f.id)b.folderId='';}o.folders.remove(f);});o.save();})])),child:Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFFE7E8EF))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Icon(Icons.folder_rounded,color:Color(0xFF887BE3),size:30),Text(f.name,style:const TextStyle(fontWeight:FontWeight.bold),maxLines:1),Text('\${n} چک‌لیست',style:const TextStyle(color:Colors.grey,fontSize:12))])));}),
+ if(!inside)...[const SizedBox(height:22),const Text('چک‌لیست‌های بدون پوشه',style:TextStyle(fontWeight:FontWeight.bold,fontSize:17))],
+ if(lists.isEmpty)const Padding(padding:EdgeInsets.all(25),child:Center(child:Text('هنوز چک‌لیستی وجود ندارد'))),
+ ...lists.map((b)=>Card(color:Colors.white,elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:const BorderSide(color:Color(0xFFE8E9F0))),margin:const EdgeInsets.only(top:10),child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[Row(children:[Expanded(child:Text(b.title,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),PopupMenuButton<String>(onSelected:(v)async{if(v=='edit'){final s=await o.pickName('ویرایش نام',b.title);if(s!=null&&s.isNotEmpty){setState(()=>b.title=s);o.save();}}else if(v=='delete'){setState(()=>o.boards.remove(b));o.save();}},itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:Text('ویرایش')),PopupMenuItem(value:'delete',child:Text('حذف'))])]),if(b.items.isNotEmpty)LinearProgressIndicator(value:b.items.where((i)=>i.done).length/b.items.length,minHeight:5),...b.items.map((i)=>CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,controlAffinity:ListTileControlAffinity.leading,value:i.done,title:Text(i.text,style:TextStyle(decoration:i.done?TextDecoration.lineThrough:null)),onChanged:(v){setState(()=>i.done=v??false);o.save();},secondary:IconButton(icon:const Icon(Icons.close,size:18),onPressed:(){setState(()=>b.items.remove(i));o.save();}))),Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:()=>addItem(b),icon:const Icon(Icons.add),label:const Text('افزودن مورد')))])))),
+ const SizedBox(height:18),if(!inside)Wrap(spacing:8,runSpacing:8,children:[OutlinedButton.icon(onPressed:o.excelIn,icon:const Icon(Icons.upload_file),label:const Text('ورود اکسل')),OutlinedButton.icon(onPressed:o.excelOut,icon:const Icon(Icons.download),label:const Text('خروجی اکسل')),OutlinedButton.icon(onPressed:o.backupOut,icon:const Icon(Icons.backup),label:const Text('پشتیبان')),OutlinedButton.icon(onPressed:o.backupIn,icon:const Icon(Icons.restore),label:const Text('بازیابی'))])
+ ]));}
 }
