@@ -16,6 +16,24 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Patch file_picker for AGP 9 built-in Kotlin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          matches = list((Path.home() / ".pub-cache/hosted/pub.dev").glob("file_picker-*/android/build.gradle"))
+          if not matches:
+              raise SystemExit("file_picker Android Gradle file not found")
+          for path in matches:
+              source = path.read_text()
+              source = re.sub(r"(?m)^\\s*id\\s*['\"]org\\.jetbrains\\.kotlin\\.android['\"]\\s*;?\\s*\\n", "", source)
+              source = re.sub(r"(?m)^\\s*id\\s*['\"]kotlin-android['\"]\\s*;?\\s*\\n", "", source)
+              source = re.sub(r"(?m)^\\s*apply plugin:\\s*['\"]kotlin-android['\"]\\s*\\n", "", source)
+              if not re.search(r"(?m)^\\s*compileSdk(?:Version)?\\s+", source):
+                  source = re.sub(r"(android\\s*\\{)", r"\\1\\n    compileSdk 36", source, count=1)
+              path.write_text(source)
+              print(f"Patched {path}")
+          PY
       - run: flutter analyze
       - run: flutter build apk --release
       - run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/APPCHEK.apk
