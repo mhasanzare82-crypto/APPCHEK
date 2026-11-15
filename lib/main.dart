@@ -101,9 +101,37 @@ class _AppState extends State<App> {
    final sh=selected;
    if(sh==null||sh.rows.isEmpty){msg('فایل اکسل خالی است');return;}
    final hasHeaders=headerRow>=0&&titleCol>=0&&itemCol>=0;
+   // Matrix layout: folder names in row 1, checklist names in row 2,
+   // and each checklist's items continue down its own column.
+   final matrixRow0=sh.rows.isNotEmpty?sh.rows[0]:<Data?>[];
+   final matrixRow1=sh.rows.length>1?sh.rows[1]:<Data?>[];
+   final matrixFormat=!hasHeaders&&sh.rows.length>2&&
+     matrixRow1.any((c)=>c?.value?.toString().trim().isNotEmpty??false);
    final grouped=<String,Map<String,List<String>>>{};
    final folderNames=<String,String>{},boardNames=<String,String>{};
    String lastFolder='',lastTitle='';
+   if(matrixFormat){
+    final width=math.max(matrixRow0.length,matrixRow1.length);
+    for(var col=0;col<width;col++){
+     final rawFolder=cell(matrixRow0,col);
+     final rawTitle=cell(matrixRow1,col);
+     if(rawTitle.isEmpty)continue;
+     final folderName=norm(rawFolder)=='بدونپوشه'?'':rawFolder;
+     final folderKey=norm(folderName),titleKey=norm(rawTitle);
+     folderNames[folderKey]=folderName;
+     boardNames.putIfAbsent('$folderKey::$titleKey',()=>rawTitle);
+     final items=<String>[];
+     for(var rowIndex=2;rowIndex<sh.rows.length;rowIndex++){
+      final item=cell(sh.rows[rowIndex],col);
+      if(item.isNotEmpty)items.add(item);
+     }
+     if(items.isNotEmpty){
+      grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(titleKey,()=>[]).addAll(items);
+     }else{
+      grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(titleKey,()=>[]);
+     }
+    }
+   }else{
    for(var r=hasHeaders?headerRow+1:0;r<sh.rows.length;r++){
     final row=sh.rows[r];
     if(hasHeaders){
@@ -129,7 +157,8 @@ class _AppState extends State<App> {
      grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(titleKey,()=>[]).add(itemValue);
     }
    }
-   if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد؛ نام ستون‌های پوشه، چک‌لیست و مورد را بررسی کنید');return;}
+   }
+   if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد؛ ساختار فایل را بررسی کنید');return;}
    var importedBoards=0,importedItems=0,createdFolders=0;
    for(final entry in grouped.entries){
     final folderName=folderNames[entry.key]?.trim()??'';
