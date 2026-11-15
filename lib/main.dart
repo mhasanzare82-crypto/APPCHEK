@@ -85,8 +85,7 @@ class _AppState extends State<App> {
    }
    if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد');return;}
    setState((){
-    final folderIds=<String,String>{};
-    for(final entry in grouped.entries){
+     for(final entry in grouped.entries){
      final folderName=entry.key.trim();
      var folderId='';
      if(folderName.isNotEmpty){
@@ -99,7 +98,6 @@ class _AppState extends State<App> {
        folders.add(created);
        folderId=created.id;
       }
-      folderIds[folderName]=folderId;
      }
      for(final boardEntry in entry.value.entries){
       boards.add(Board(uid(),boardEntry.key,folderId,boardEntry.value.map((t)=>Item(uid(),t,color:randomColor())).toList()));
@@ -107,7 +105,6 @@ class _AppState extends State<App> {
     }
    });
    await save();
-   final createdCount=grouped.keys.where((name)=>name.trim().isNotEmpty&&!folders.any((x)=>x.name.trim().toLowerCase()==name.trim().toLowerCase())).length;
    msg('ورود اکسل انجام شد؛ پوشه‌های موجود استفاده و پوشه‌های جدید به‌صورت خودکار ساخته شدند');
   }catch(_){msg('فایل اکسل قابل خواندن نیست');}
  }
