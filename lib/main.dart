@@ -56,7 +56,25 @@ class _AppState extends State<App> {
  Future<void> addBoard(String folder) async {final s=await pickName('چک‌لیست جدید');if(s!=null&&s.isNotEmpty){setState(()=>boards.add(Board(uid(),s,folder, null, randomColor())));save();}}
  Future<void> backupOut() async {final data={'format':'checklist-backup','version':2,'folders':folders.map((e)=>e.toJson()).toList(),'boards':boards.map((e)=>e.toJson()).toList()};final d=await getTemporaryDirectory();final f=File('${d.path}/checklist-backup.json');await f.writeAsString(const JsonEncoder.withIndent('  ').convert(data));await Share.shareXFiles([XFile(f.path)],text:'پشتیبان چک‌یار');}
  Future<void> backupIn() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['json','bak','txt'],withData:true);if(f==null)return;try{final b=f.files.single.bytes??await File(f.files.single.path!).readAsBytes();final x=jsonDecode(utf8.decode(b));final fm=x is Map?(x['folders']??x['categories']??[]):[];final bm=x is List?x:x is Map?(x['boards']??x['lists']??x['checklists']??x['data']??[]):[];final nf=(fm as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??m['title']??'پوشه').toString(),color:(m['color']??0xFF6658D3) as int)).toList();final nb=(bm as List).whereType<Map>().map(Board.from).toList();if(nf.isEmpty&&nb.isEmpty)throw Exception();setState((){folders=nf;boards=nb;});await save();msg('بازیابی انجام شد');}catch(_){msg('فایل پشتیبان معتبر یا سازگار نیست');}}
- Future<void> excelOut([String? folder]) async {final e=Excel.createExcel();final s=e['Sheet1'];s.appendRow(['پوشه','چک‌لیست','مورد','انجام شده'].map((v)=>TextCellValue(v)).toList());for(final b in boards.where((x)=>folder==null||x.folderId==folder)){final fn=folders.where((x)=>x.id==b.folderId).firstOrNull?.name??'بدون پوشه';for(final i in b.items){s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(i.text),TextCellValue(i.done?'بله':'خیر')]);}if(b.items.isEmpty)s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(''),TextCellValue('')]);}final bytes=e.encode();if(bytes==null)return;final d=await getTemporaryDirectory();final f=File('${d.path}/checklists.xlsx');await f.writeAsBytes(bytes);await Share.shareXFiles([XFile(f.path)],text:'خروجی اکسل');}
+ Future<void> excelOut([String? folder]) async {
+  final selectedBoards=boards.where((b)=>folder==null||b.folderId==folder).toList();
+  if(selectedBoards.isEmpty){msg('چک‌لیستی برای خروجی گرفتن وجود ندارد');return;}
+  final e=Excel.createExcel();
+  final s=e['Sheet1'];
+  // Row 1: folder names; Row 2: checklist titles; following rows: checklist items.
+  s.appendRow(selectedBoards.map((b)=>TextCellValue(folders.where((f)=>f.id==b.folderId).firstOrNull?.name??'بدون پوشه')).toList());
+  s.appendRow(selectedBoards.map((b)=>TextCellValue(b.title)).toList());
+  final maxItems=selectedBoards.fold<int>(0,(max,b)=>math.max(max,b.items.length));
+  for(var row=0;row<maxItems;row++){
+   s.appendRow(selectedBoards.map((b)=>TextCellValue(row<b.items.length?b.items[row].text:'')).toList());
+  }
+  final bytes=e.encode();
+  if(bytes==null)return;
+  final d=await getTemporaryDirectory();
+  final f=File('${d.path}/checklists.xlsx');
+  await f.writeAsBytes(bytes);
+  await Share.shareXFiles([XFile(f.path)],text:'خروجی اکسل');
+ }
  Future<void> excelIn() async {
   final picked=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','xls'],withData:true);
   if(picked==null)return;
