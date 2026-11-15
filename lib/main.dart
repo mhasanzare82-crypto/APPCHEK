@@ -100,13 +100,15 @@ class _AppState extends State<App> {
    if(selected==null){for(final sheet in book.tables.values){if(sheet.rows.any((row)=>row.any((c)=>(c?.value?.toString().trim()??'').isNotEmpty))){selected=sheet;break;}}}
    final sh=selected;
    if(sh==null||sh.rows.isEmpty){msg('فایل اکسل خالی است');return;}
-   final hasHeaders=headerRow>=0&&titleCol>=0&&itemCol>=0;
-   // Matrix layout: folder names in row 1, checklist names in row 2,
-   // and each checklist's items continue down its own column.
+   // Matrix layout: row 1 contains folder names, row 2 checklist names,
+   // and all following rows contain items in their respective columns.
    final matrixRow0=sh.rows.isNotEmpty?sh.rows[0]:<Data?>[];
    final matrixRow1=sh.rows.length>1?sh.rows[1]:<Data?>[];
-   final matrixFormat=!hasHeaders&&sh.rows.length>2&&
-     matrixRow1.any((c)=>c?.value?.toString().trim().isNotEmpty??false);
+   final matrixHasTitles=matrixRow1.any((c)=>c?.value?.toString().trim().isNotEmpty??false);
+   // Prefer the matrix interpretation when the detected "header" is not
+   // the first row; this prevents checklist titles from being read as items.
+   final matrixFormat=sh.rows.length>=2&&matrixHasTitles&&headerRow!=0;
+   final hasHeaders=headerRow>=0&&titleCol>=0&&itemCol>=0&&!matrixFormat;
    final grouped=<String,Map<String,List<String>>>{};
    final folderNames=<String,String>{},boardNames=<String,String>{};
    String lastFolder='',lastTitle='';
