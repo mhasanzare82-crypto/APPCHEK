@@ -64,7 +64,7 @@ class _AppState extends State<App> {
   // Row 1: folder names; Row 2: checklist titles; following rows: checklist items.
   s.appendRow(selectedBoards.map((b)=>TextCellValue(folders.where((f)=>f.id==b.folderId).firstOrNull?.name??'بدون پوشه')).toList());
   s.appendRow(selectedBoards.map((b)=>TextCellValue(b.title)).toList());
-  final maxItems=selectedBoards.fold<int>(0,(max,b)=>math.max(max,b.items.length));
+  final maxItems=selectedBoards.fold<int>(0,(max,b)=>b.items.length>max?b.items.length:max);
   for(var row=0;row<maxItems;row++){
    s.appendRow(selectedBoards.map((b)=>TextCellValue(row<b.items.length?b.items[row].text:'')).toList());
   }
