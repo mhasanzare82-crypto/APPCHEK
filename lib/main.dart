@@ -58,55 +58,82 @@ class _AppState extends State<App> {
  Future<void> backupIn() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['json','bak','txt'],withData:true);if(f==null)return;try{final b=f.files.single.bytes??await File(f.files.single.path!).readAsBytes();final x=jsonDecode(utf8.decode(b));final fm=x is Map?(x['folders']??x['categories']??[]):[];final bm=x is List?x:x is Map?(x['boards']??x['lists']??x['checklists']??x['data']??[]):[];final nf=(fm as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??m['title']??'پوشه').toString(),color:(m['color']??0xFF6658D3) as int)).toList();final nb=(bm as List).whereType<Map>().map(Board.from).toList();if(nf.isEmpty&&nb.isEmpty)throw Exception();setState((){folders=nf;boards=nb;});await save();msg('بازیابی انجام شد');}catch(_){msg('فایل پشتیبان معتبر یا سازگار نیست');}}
  Future<void> excelOut([String? folder]) async {final e=Excel.createExcel();final s=e['Sheet1'];s.appendRow(['پوشه','چک‌لیست','مورد','انجام شده'].map((v)=>TextCellValue(v)).toList());for(final b in boards.where((x)=>folder==null||x.folderId==folder)){final fn=folders.where((x)=>x.id==b.folderId).firstOrNull?.name??'بدون پوشه';for(final i in b.items){s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(i.text),TextCellValue(i.done?'بله':'خیر')]);}if(b.items.isEmpty)s.appendRow([TextCellValue(fn),TextCellValue(b.title),TextCellValue(''),TextCellValue('')]);}final bytes=e.encode();if(bytes==null)return;final d=await getTemporaryDirectory();final f=File('${d.path}/checklists.xlsx');await f.writeAsBytes(bytes);await Share.shareXFiles([XFile(f.path)],text:'خروجی اکسل');}
  Future<void> excelIn() async {
-  final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','xls'],withData:true);
-  if(f==null||f.files.single.bytes==null)return;
+  final picked=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','xls'],withData:true);
+  if(picked==null)return;
   try{
-   final e=Excel.decodeBytes(f.files.single.bytes!);
-   final sh=e.tables.values.first;
-   if(sh.rows.isEmpty){msg('فایل اکسل خالی است');return;}
-   String cell(List<Data?> row,int n)=>n<row.length?(row[n]?.value?.toString().trim()??''):'';
-   final first=sh.rows.first.map((c)=>c?.value?.toString().trim().toLowerCase()??'').toList();
-   final titleCol=first.indexWhere((v)=>v=='چک‌لیست'||v=='چک لیست'||v=='checklist'||v=='list'||v=='title');
-   final itemCol=first.indexWhere((v)=>v=='مورد'||v=='آیتم'||v=='item'||v=='task');
-   final folderCol=first.indexWhere((v)=>v=='پوشه'||v=='دسته‌بندی'||v=='دسته بندی'||v=='folder'||v=='category');
-   final exportedFormat=titleCol>=0&&itemCol>=0;
+   final bytes=picked.files.single.bytes??await File(picked.files.single.path!).readAsBytes();
+   final book=Excel.decodeBytes(bytes);
+   if(book.tables.isEmpty){msg('هیچ برگه‌ای در فایل اکسل پیدا نشد');return;}
+   String norm(String value)=>value.toLowerCase().replaceAll('\u200c','').replaceAll('\u200f','').replaceAll('\u200e','').replaceAll(RegExp(r'[\\s_ـ]+'),'').trim();
+   String cell(List<Data?> row,int index)=>index<row.length?(row[index]?.value?.toString().trim()??''):'';
+   Sheet? selected;
+   int headerRow=-1,folderCol=-1,titleCol=-1,itemCol=-1;
+   for(final sheet in book.tables.values){
+    for(var r=0;r<sheet.rows.length&&r<20;r++){
+     final headers=sheet.rows[r].map((c)=>norm(c?.value?.toString()??'')).toList();
+     final ti=headers.indexWhere((v)=>['چکلیست','checklist','list','title','نامچکلیست'].contains(v));
+     final ii=headers.indexWhere((v)=>['مورد','آیتم','item','task','ناممورد'].contains(v));
+     if(ti>=0&&ii>=0){
+      selected=sheet;headerRow=r;titleCol=ti;itemCol=ii;
+      folderCol=headers.indexWhere((v)=>['پوشه','نامپوشه','دستهبندی','folder','foldername','category'].contains(v));
+      break;
+     }
+    }
+    if(selected!=null)break;
+    if(selected==null&&sheet.rows.any((row)=>row.any((c)=>((c?.value?.toString()??'').trim().isNotEmpty))))selected=sheet;
+   }
+   final sh=selected;
+   if(sh==null||sh.rows.isEmpty){msg('فایل اکسل خالی است');return;}
+   final hasHeaders=headerRow>=0&&titleCol>=0&&itemCol>=0;
    final grouped=<String,Map<String,List<String>>>{};
-   for(var r=exportedFormat?1:0;r<sh.rows.length;r++){
+   final folderNames=<String,String>{};
+   String lastFolder='',lastTitle='';
+   for(var r=hasHeaders?headerRow+1:0;r<sh.rows.length;r++){
     final row=sh.rows[r];
-    if(exportedFormat){
-     final folderName=folderCol>=0?cell(row,folderCol):'';
-     final title=cell(row,titleCol).isEmpty?'واردشده از اکسل':cell(row,titleCol);
+    if(hasHeaders){
+     final rawFolder=folderCol>=0?cell(row,folderCol):'';
+     final rawTitle=cell(row,titleCol);
+     if(rawFolder.isNotEmpty)lastFolder=rawFolder;
+     if(rawTitle.isNotEmpty)lastTitle=rawTitle;
      final item=cell(row,itemCol);
-     if(item.isNotEmpty)grouped.putIfAbsent(folderName,()=>{}).putIfAbsent(title,()=>[]).add(item);
+     if(item.isEmpty)continue;
+     final folderKey=norm(lastFolder);
+     final title=lastTitle.isEmpty?'واردشده از اکسل':lastTitle;
+     folderNames[folderKey]=lastFolder;
+     grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(title,()=>[]).add(item);
     }else{
      final values=row.map((c)=>c?.value?.toString().trim()??'').where((v)=>v.isNotEmpty).toList();
      if(values.isNotEmpty)grouped.putIfAbsent('',()=>{}).putIfAbsent('واردشده از اکسل',()=>[]).add(values.join(' - '));
     }
    }
-   if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد');return;}
-   setState((){
-     for(final entry in grouped.entries){
-     final folderName=entry.key.trim();
-     var folderId='';
-     if(folderName.isNotEmpty){
-      final key=folderName.toLowerCase();
-      final existing=folders.where((x)=>x.name.trim().toLowerCase()==key).firstOrNull;
-      if(existing!=null){
-       folderId=existing.id;
-      }else{
-       final created=Folder(uid(),folderName,color:randomColor());
-       folders.add(created);
-       folderId=created.id;
-      }
-     }
-     for(final boardEntry in entry.value.entries){
-      boards.add(Board(uid(),boardEntry.key,folderId,boardEntry.value.map((t)=>Item(uid(),t,color:randomColor())).toList()));
+   if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد؛ ردیف عنوان‌ها و ستون مورد را بررسی کنید');return;}
+   var importedBoards=0,importedItems=0,createdFolders=0;
+   final folderIdByKey=<String,String>{};
+   for(final entry in grouped.entries){
+    final folderName=folderNames[entry.key]?.trim()??'';
+    var folderId='';
+    if(folderName.isNotEmpty){
+     final existing=folders.where((x)=>norm(x.name)==norm(folderName)).firstOrNull;
+     if(existing!=null){
+      folderId=existing.id;
+     }else{
+      final created=Folder(uid(),folderName,color:randomColor());
+      folders.add(created);folderId=created.id;createdFolders++;
      }
     }
-   });
+    folderIdByKey[entry.key]=folderId;
+    for(final boardEntry in entry.value.entries){
+     final items=boardEntry.value.map((t)=>Item(uid(),t,color:randomColor())).toList();
+     boards.add(Board(uid(),boardEntry.key,folderId,items));
+     importedBoards++;importedItems+=items.length;
+    }
+   }
    await save();
-   msg('ورود اکسل انجام شد؛ پوشه‌های موجود استفاده و پوشه‌های جدید به‌صورت خودکار ساخته شدند');
-  }catch(_){msg('فایل اکسل قابل خواندن نیست');}
+   if(mounted)setState((){});
+   msg('ورود انجام شد: $createdFolders پوشه جدید، $importedBoards چک‌لیست و $importedItems مورد');
+  }catch(e){
+   msg('خطا در خواندن اکسل: ${e.toString()}');
+  }
  }
  Future<void> chooseFont() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],withData:true);if(f==null||f.files.single.bytes==null)return;try{fontBytes=f.files.single.bytes;await loadFont(fontBytes!);setState(()=>family='UserFont');await save();}catch(_){msg('فایل فونت معتبر نیست');}}
  Future<void> settings() async {
