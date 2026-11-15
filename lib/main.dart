@@ -108,7 +108,6 @@ class _AppState extends State<App> {
    }
    if(grouped.isEmpty){msg('هیچ موردی برای ورود در فایل پیدا نشد؛ ردیف عنوان‌ها و ستون مورد را بررسی کنید');return;}
    var importedBoards=0,importedItems=0,createdFolders=0;
-   final folderIdByKey=<String,String>{};
    for(final entry in grouped.entries){
     final folderName=folderNames[entry.key]?.trim()??'';
     var folderId='';
@@ -121,7 +120,6 @@ class _AppState extends State<App> {
       folders.add(created);folderId=created.id;createdFolders++;
      }
     }
-    folderIdByKey[entry.key]=folderId;
     for(final boardEntry in entry.value.entries){
      final items=boardEntry.value.map((t)=>Item(uid(),t,color:randomColor())).toList();
      boards.add(Board(uid(),boardEntry.key,folderId,items));
