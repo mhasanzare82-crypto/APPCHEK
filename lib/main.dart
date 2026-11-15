@@ -96,7 +96,7 @@ class _AppState extends State<App> {
      if(item.isEmpty)continue;
      final folderKey=norm(lastFolder),title=lastTitle.isEmpty?'واردشده از اکسل':lastTitle,titleKey=norm(title);
      folderNames[folderKey]=lastFolder;
-     boardNames.putIfAbsent(folderKey+'::'+titleKey,()=>title);
+     boardNames.putIfAbsent('$folderKey::$titleKey', () => title);
      grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(titleKey,()=>[]).add(item);
     }else{
      final values=row.map((c)=>c?.value?.toString().trim()??'').toList();
@@ -107,7 +107,7 @@ class _AppState extends State<App> {
      if(norm(titleValue).isEmpty||itemValue.isEmpty)continue;
      final folderKey=norm(folderValue),titleKey=norm(titleValue);
      folderNames[folderKey]=folderValue;
-     boardNames.putIfAbsent(folderKey+'::'+titleKey,()=>titleValue);
+     boardNames.putIfAbsent('$folderKey::$titleKey', () => titleValue);
      grouped.putIfAbsent(folderKey,()=>{}).putIfAbsent(titleKey,()=>[]).add(itemValue);
     }
    }
@@ -122,7 +122,7 @@ class _AppState extends State<App> {
      else{final created=Folder(uid(),folderName,color:randomColor());folders.add(created);folderId=created.id;createdFolders++;}
     }
     for(final boardEntry in entry.value.entries){
-     final displayTitle=boardNames[entry.key+'::'+boardEntry.key]??boardEntry.key;
+     final displayTitle = boardNames['${entry.key}::${boardEntry.key}'] ?? boardEntry.key;
      final items=boardEntry.value.map((t)=>Item(uid(),t,color:randomColor())).toList();
      boards.add(Board(uid(),displayTitle,folderId,items));importedBoards++;importedItems+=items.length;
     }
@@ -130,7 +130,7 @@ class _AppState extends State<App> {
    await save();
    if(mounted)setState((){});
    msg('ورود انجام شد: $createdFolders پوشه جدید، $importedBoards چک‌لیست و $importedItems مورد');
-  }catch(error){msg('خطا در خواندن اکسل: '+error.toString());}
+  }catch(error){msg('خطا در خواندن اکسل: $error');}
  }
  Future<void> chooseFont() async {final f=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],withData:true);if(f==null||f.files.single.bytes==null)return;try{fontBytes=f.files.single.bytes;await loadFont(fontBytes!);setState(()=>family='UserFont');await save();}catch(_){msg('فایل فونت معتبر نیست');}}
  Future<void> settings() async {
