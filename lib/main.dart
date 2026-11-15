@@ -64,7 +64,7 @@ class _AppState extends State<App> {
    final bytes=picked.files.single.bytes??await File(picked.files.single.path!).readAsBytes();
    final book=Excel.decodeBytes(bytes);
    if(book.tables.isEmpty){msg('هیچ برگه‌ای در فایل اکسل پیدا نشد');return;}
-   String norm(String value)=>value.toLowerCase().replaceAll('\u200c','').replaceAll('\u200f','').replaceAll('\u200e','').replaceAll(RegExp(r'[\\s_ـ]+'),'').trim();
+   String norm(String value)=>value.toLowerCase().replaceAll('\u200c','').replaceAll('\u200f','').replaceAll('\u200e','').replaceAll(RegExp(r'[\s_ـ]+'),'').trim();
    String cell(List<Data?> row,int index)=>index<row.length?(row[index]?.value?.toString().trim()??''):'';
    Sheet? selected;
    int headerRow=-1,folderCol=-1,titleCol=-1,itemCol=-1;
