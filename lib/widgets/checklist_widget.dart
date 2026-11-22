@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -39,6 +41,14 @@ class ChecklistWidgetService {
         'items': selected == null ? <String>[] : itemsFor(selected),
         'backgroundColor': backgroundColor,
         'fontFamily': fontFamily,
+        'selectedBoardId': selectedBoardId,
+        // Send a native-owned snapshot. The Android picker must not depend on
+        // the private SharedPreferences key format used by Flutter plugins.
+        'boardsJson': jsonEncode(boards.map((board) => {
+          'id': board.id,
+          'title': board.title,
+          'items': itemsFor(board),
+        }).toList()),
       });
     } on PlatformException {
       // The app remains usable if the Android widget bridge is unavailable.
