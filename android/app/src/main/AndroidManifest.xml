@@ -6,21 +6,6 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
-            android:name=".ChecklistWidgetConfigureActivity"
-            android:exported="true"
-            android:theme="@android:style/Theme.Material.Light.Dialog.Alert"
-            android:excludeFromRecents="true" />
-        <receiver
-            android:name=".ChecklistWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/checklist_widget_info" />
-        </receiver>
-        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
