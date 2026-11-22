@@ -170,7 +170,7 @@ class _HomeState extends State<Home>{
   widget.owner.msg('برای خروج، دکمه بازگشت را ${4-_backPressCount} بار دیگر پشت سر هم فشار دهید');
  }
  Board? featured;
- @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];WidgetsBinding.instance.addPostFrameCallback((_)async{try{final open=await checklistWidgetChannel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
+ @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];checklistWidgetChannel.setMethodCallHandler((call)async{if(call.method=='widgetOpened'&&mounted)await widget.owner.selectWidgetChecklist();});WidgetsBinding.instance.addPostFrameCallback((_)async{try{final open=await checklistWidgetChannel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
  Future<void> addItem(Board b)async{
   final title=TextEditingController();final description=TextEditingController();final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   Future<void> commit(BuildContext dialogContext)async{final value=title.text.trim();if(value.isEmpty)return;setState(()=>b.items.add(Item(uid(),value,description:description.text.trim(),color:widget.owner.randomColor())));await widget.owner.save();if(dialogContext.mounted)Navigator.pop(dialogContext);}
