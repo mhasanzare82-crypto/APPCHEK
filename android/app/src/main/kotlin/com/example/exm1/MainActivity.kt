@@ -46,6 +46,9 @@ class MainActivity : FlutterFragmentActivity() {
                     val items = call.argument<List<String>>("items") ?: emptyList()
                     val backgroundColor = call.argument<Int>("backgroundColor") ?: 0xFF202124.toInt()
                     val fontFamily = call.argument<String>("fontFamily") ?: "sans"
+                    val selectedBoardId = call.argument<String>("selectedBoardId") ?: ""
+                    val boardsJson = call.argument<String>("boardsJson") ?: "[]"
+                    ChecklistHomeWidgetProvider.saveBoardsSnapshot(this, boardsJson, selectedBoardId)
                     ChecklistHomeWidgetProvider.saveAndRefresh(
                         context = this,
                         title = title,
