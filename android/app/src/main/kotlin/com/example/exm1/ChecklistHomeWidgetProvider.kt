@@ -13,7 +13,28 @@ class ChecklistHomeWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val PREFS = "checklist_home_widget"
         private const val OPEN_ACTION = "com.example.exm1.OPEN_CHECKLIST_WIDGET"
-        private const val UPDATE_ACTION = "com.example.exm1.UPDATE_CHECKLIST_WIDGET"
+
+        /** Save data before refreshing so new widget instances render the same state. */
+        fun saveAndRefresh(
+            context: Context,
+            title: String,
+            items: List<String>,
+            backgroundColor: Int,
+            fontFamily: String
+        ) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString("title", title)
+                .putString("items", items.joinToString("\n"))
+                .putInt("backgroundColor", backgroundColor)
+                .putString("fontFamily", fontFamily)
+                .commit()
+
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(
+                ComponentName(context, ChecklistHomeWidgetProvider::class.java)
+            )
+            ids.forEach { render(context, manager, it) }
+        }
 
         fun render(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -64,26 +85,6 @@ class ChecklistHomeWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_root, pending)
             manager.updateAppWidget(widgetId, views)
-        }
-    }
-
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-        if (intent.action == UPDATE_ACTION) {
-            val title = intent.getStringExtra("title") ?: "چک‌لیستی انتخاب نشده"
-            val items = intent.getStringArrayListExtra("items") ?: arrayListOf()
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putString("title", title)
-                .putString("items", items.joinToString("\n"))
-                .putInt("backgroundColor", intent.getIntExtra("backgroundColor", 0xFF202124.toInt()))
-                .putString("fontFamily", intent.getStringExtra("fontFamily") ?: "sans")
-                .apply()
-
-            val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(
-                ComponentName(context, ChecklistHomeWidgetProvider::class.java)
-            )
-            ids.forEach { render(context, manager, it) }
         }
     }
 
