@@ -16,6 +16,15 @@ class MainActivity : FlutterFragmentActivity() {
         widgetLaunchPending = intent?.action == openWidgetAction
     }
 
+    override fun onResume() {
+        super.onResume()
+        val selected = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .getString("flutter.selectedWidgetBoardId", null)
+        if (!selected.isNullOrBlank()) {
+            widgetChannel?.invokeMethod("widgetChecklistSelected", selected)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
