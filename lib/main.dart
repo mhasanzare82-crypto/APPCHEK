@@ -35,7 +35,7 @@ class _AppState extends State<App> {
  final ChecklistWidgetService checklistWidgetService=ChecklistWidgetService();
  final auth=LocalAuthentication(); List<Folder> folders=[]; List<Board> boards=[];
  bool ready=false,locked=false,biometric=false; List<int> palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2]; double size=15,inputSize=15; String family='Vazirmatn'; Uint8List? fontBytes;
- int widgetBackground=0xFF202124; String widgetFont='sans'; String selectedWidgetBoardId='';
+ int widgetBackground=0xFF202124; int widgetTextColor=0xFFFFFFFF; String widgetFont='sans'; String selectedWidgetBoardId='';
  @override void initState(){super.initState();load();}
  Future<void> load() async {
   final p=await SharedPreferences.getInstance();
@@ -43,13 +43,13 @@ class _AppState extends State<App> {
    folders=(jsonDecode(p.getString('folders')??'[]') as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??'').toString(),color:(m['color']??0xFF6658D3) as int)).toList();
    boards=(jsonDecode(p.getString('boards')??'[]') as List).whereType<Map>().map(Board.from).toList();
    size=p.getDouble('size')??15; inputSize=p.getDouble('inputSize')??15; biometric=p.getBool('bio')??false;
-   widgetBackground=p.getInt('widgetBackground')??0xFF202124; widgetFont=p.getString('widgetFont')??'sans'; selectedWidgetBoardId=p.getString('selectedWidgetBoardId')??''; palette=(p.getStringList('palette')??[]).map((v)=>int.tryParse(v)??0xFF6658D3).toList(); if(palette.isEmpty)palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2];
+   widgetBackground=p.getInt('widgetBackground')??0xFF202124; widgetTextColor=p.getInt('widgetTextColor')??0xFFFFFFFF; widgetFont=p.getString('widgetFont')??'sans'; selectedWidgetBoardId=p.getString('selectedWidgetBoardId')??''; palette=(p.getStringList('palette')??[]).map((v)=>int.tryParse(v)??0xFF6658D3).toList(); if(palette.isEmpty)palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2];
    final raw=p.getString('font'); if(raw!=null){fontBytes=base64Decode(raw);await loadFont(fontBytes!);family='UserFont';}
   } catch (_) {}
   if(mounted)setState(()=>ready=true);
   if(biometric){locked=true;setState((){});unlock();}
  }
- Future<void> save() async {final p=await SharedPreferences.getInstance();await p.setString('folders',jsonEncode(folders.map((e)=>e.toJson()).toList()));await p.setString('boards',jsonEncode(boards.map((e)=>e.toJson()).toList()));await p.setDouble('size',size);await p.setDouble('inputSize',inputSize);await p.setStringList('palette',palette.map((v)=>v.toString()).toList());await p.setBool('bio',biometric);if(fontBytes!=null)await p.setString('font',base64Encode(fontBytes!));await p.setInt('widgetBackground',widgetBackground);await p.setString('widgetFont',widgetFont);await p.setString('selectedWidgetBoardId',selectedWidgetBoardId);await syncChecklistWidget();}
+ Future<void> save() async {final p=await SharedPreferences.getInstance();await p.setString('folders',jsonEncode(folders.map((e)=>e.toJson()).toList()));await p.setString('boards',jsonEncode(boards.map((e)=>e.toJson()).toList()));await p.setDouble('size',size);await p.setDouble('inputSize',inputSize);await p.setStringList('palette',palette.map((v)=>v.toString()).toList());await p.setBool('bio',biometric);if(fontBytes!=null)await p.setString('font',base64Encode(fontBytes!));await p.setInt('widgetBackground',widgetBackground);await p.setInt('widgetTextColor',widgetTextColor);await p.setString('widgetFont',widgetFont);await p.setString('selectedWidgetBoardId',selectedWidgetBoardId);await syncChecklistWidget();}
  Future<void> loadFont(Uint8List b) async {final l=FontLoader('UserFont')..addFont(Future.value(ByteData.sublistView(b)));await l.load();}
  int randomColor()=>palette[math.Random().nextInt(palette.length)];
  Future<void> syncChecklistWidget() async {
@@ -57,6 +57,7 @@ class _AppState extends State<App> {
    boards: boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
    selectedBoardId: selectedWidgetBoardId,
    backgroundColor: widgetBackground,
+   textColor: widgetTextColor,
    fontFamily: widgetFont,
    itemsFor: (option) {
     final board=boards.firstWhere((entry)=>entry.id==option.id);
@@ -134,8 +135,10 @@ class _AppState extends State<App> {
    const Divider(height:28),
    ChecklistWidgetSettings(
     backgroundColor:widgetBackground,
+    textColor:widgetTextColor,
     fontFamily:widgetFont,
     onChangeBackground:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});},
+    onChangeTextColor:()async{await pickSliderColor(title:'رنگ متن ویجت',initial:widgetTextColor,onChanged:(v){widgetTextColor=v;});await save();refresh((){});},
     onFontChanged:(value)async{widgetFont=value;await save();refresh((){});},
    ),
    const Divider(height:28),
