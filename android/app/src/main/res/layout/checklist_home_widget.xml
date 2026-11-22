@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:padding="12dp"
     android:background="@drawable/checklist_widget_bg">
+
     <TextView
         android:id="@+id/widget_title"
         android:layout_width="match_parent"
@@ -16,6 +17,7 @@
         android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end" />
+
     <TextView
         android:id="@+id/widget_divider"
         android:layout_width="match_parent"
@@ -24,16 +26,42 @@
         android:layout_marginBottom="7dp"
         android:background="#55FFFFFF"
         android:text="" />
+
     <TextView
-        android:id="@+id/widget_content"
+        android:id="@+id/widget_content_sans"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:text="برای انتخاب چک‌لیست لمس کن"
         android:textColor="#FFFFFFFF"
         android:textSize="13sp"
+        android:fontFamily="sans"
+        android:gravity="top" />
+
+    <TextView
+        android:id="@+id/widget_content_serif"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="برای انتخاب چک‌لیست لمس کن"
+        android:textColor="#FFFFFFFF"
+        android:textSize="13sp"
+        android:fontFamily="serif"
         android:gravity="top"
-        />
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_content_mono"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="برای انتخاب چک‌لیست لمس کن"
+        android:textColor="#FFFFFFFF"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:gravity="top"
+        android:visibility="gone" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
