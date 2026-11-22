@@ -11,13 +11,7 @@ class ChecklistHomeWidgetProvider : AppWidgetProvider() {
  companion object {
   private const val PREFS="checklist_home_widget"
   fun saveBoardsSnapshot(context:Context,boardsJson:String,selectedBoardId:String){
-   val prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
-   val current=prefs.getString("selectedBoardId","")?:""
-   // Keep a selection made from the home-screen popup when Flutter is already
-   // running with an older in-memory SharedPreferences snapshot.
-   val stillExists=try{val array=org.json.JSONArray(boardsJson);(0 until array.length()).any{array.optJSONObject(it)?.optString("id","")==current}}catch(_:Exception){false}
-   val effective=if(current.isNotEmpty()&&stillExists)current else selectedBoardId
-   prefs.edit().putString("boardsJson",boardsJson).putString("selectedBoardId",effective).commit()
+   context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("boardsJson",boardsJson).putString("selectedBoardId",selectedBoardId).commit()
   }
   fun saveAndRefresh(context:Context,title:String,items:List<String>,backgroundColor:Int,fontFamily:String){
    context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("title",title).putString("items",items.joinToString("\n")).putInt("backgroundColor",backgroundColor).putString("fontFamily",fontFamily).commit();refreshAll(context)
