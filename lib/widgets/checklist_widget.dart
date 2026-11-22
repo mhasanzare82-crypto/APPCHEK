@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Data passed from the checklist domain to the Android home-screen widget.
