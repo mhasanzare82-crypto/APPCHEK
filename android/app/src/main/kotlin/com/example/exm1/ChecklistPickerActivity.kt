@@ -2,9 +2,15 @@ package com.example.exm1
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -24,21 +30,44 @@ class ChecklistPickerActivity : Activity() {
             val board = boards.optJSONObject(index) ?: continue
             val title = board.optString("title", "").trim()
             if (title.isNotEmpty()) {
-                val items = board.optJSONArray("items") ?: JSONArray()
-                labels.add("$title • ${items.length()} مورد")
+                labels.add(title)
                 candidates.add(board)
             }
         }
 
+        // Keep this picker deliberately compact: no heading, no item counts,
+        // and high-contrast checklist names on individual light rows.
         val builder = AlertDialog.Builder(this)
-            .setTitle("انتخاب چک‌لیست برای ویجت")
             .setNegativeButton("بستن") { _, _ -> finish() }
 
         if (labels.isEmpty()) {
-            builder.setMessage("هنوز چک‌لیستی ساخته نشده است. ابتدا داخل برنامه چک‌لیست بساز.")
+            builder.setMessage("هنوز چک‌لیستی ساخته نشده است.")
         } else {
             builder.setAdapter(
-                ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
+                object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, labels) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val row = (convertView as? TextView) ?: TextView(this@ChecklistPickerActivity)
+                        row.text = getItem(position)
+                        row.setTextColor(Color.rgb(35, 38, 48))
+                        row.textSize = 15f
+                        row.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                        row.textDirection = View.TEXT_DIRECTION_FIRST_STRONG
+                        val horizontal = dp(14)
+                        row.setPadding(horizontal, dp(11), horizontal, dp(11))
+                        row.minHeight = dp(44)
+                        val shape = GradientDrawable().apply {
+                            setColor(Color.rgb(242, 244, 249))
+                            cornerRadius = dp(9).toFloat()
+                        }
+                        row.background = shape
+                        val params = AbsListViewLayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                        row.layoutParams = params
+                        return row
+                    }
+                }
             ) { _, index ->
                 val board = candidates[index]
                 val rawItems = board.optJSONArray("items") ?: JSONArray()
@@ -56,10 +85,7 @@ class ChecklistPickerActivity : Activity() {
                     } else {
                         val text = rawItems.optString(itemIndex, "").trim()
                         if (text.isNotEmpty()) {
-                            output.add(
-                                if (text.startsWith("✓") || text.startsWith("•")) text
-                                else "• $text"
-                            )
+                            output.add(if (text.startsWith("✓") || text.startsWith("•")) text else "• $text")
                         }
                     }
                 }
@@ -85,19 +111,20 @@ class ChecklistPickerActivity : Activity() {
             if (!isFinishing) finish()
         }
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.white)
         dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.88f).toInt(),
+            (resources.displayMetrics.widthPixels * 0.80f).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
     }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     private fun readBoardsSnapshot(nativeSnapshot: String?): JSONArray {
         val nativeBoards = parseBoards(nativeSnapshot)
         if (nativeBoards.length() > 0) return nativeBoards
 
-        // Compatibility fallback for installations where the widget has not
-        // received its first native snapshot yet. Flutter stores the JSON string
-        // under this key in its Android SharedPreferences file.
         val flutterSnapshot = getSharedPreferences(
             "FlutterSharedPreferences",
             MODE_PRIVATE
@@ -111,15 +138,16 @@ class ChecklistPickerActivity : Activity() {
             val parsed = org.json.JSONTokener(raw).nextValue()
             when (parsed) {
                 is JSONArray -> parsed
-                is JSONObject -> {
-                    val nested = parsed.optJSONArray("boards")
-                        ?: parsed.optJSONArray("checklists")
-                    nested ?: JSONArray()
-                }
+                is JSONObject -> parsed.optJSONArray("boards")
+                    ?: parsed.optJSONArray("checklists")
+                    ?: JSONArray()
                 else -> JSONArray()
             }
         } catch (_: Exception) {
             JSONArray()
         }
     }
+
+    private class AbsListViewLayoutParams(width: Int, height: Int) :
+        android.widget.AbsListView.LayoutParams(width, height)
 }
