@@ -131,7 +131,7 @@ class ChecklistWidgetSettings extends StatelessWidget {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.palette_outlined),
+          leading: Icon(Icons.palette_outlined, color: Color(backgroundColor)),
           title: const Text('رنگ پس‌زمینه ویجت'),
           subtitle: const Text('تغییر رنگ پس‌زمینه صفحه اصلی'),
           onTap: onChangeBackground,
