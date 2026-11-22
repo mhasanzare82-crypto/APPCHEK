@@ -16,6 +16,15 @@ class MainActivity : FlutterFragmentActivity() {
         widgetLaunchPending = intent?.action == openWidgetAction
     }
 
+    override fun onResume() {
+        super.onResume()
+        val selected = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .getString("flutter.selectedWidgetBoardId", null)
+        if (!selected.isNullOrBlank()) {
+            widgetChannel?.invokeMethod("widgetChecklistSelected", selected)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -46,6 +55,9 @@ class MainActivity : FlutterFragmentActivity() {
                     val items = call.argument<List<String>>("items") ?: emptyList()
                     val backgroundColor = call.argument<Int>("backgroundColor") ?: 0xFF202124.toInt()
                     val fontFamily = call.argument<String>("fontFamily") ?: "sans"
+                    val selectedBoardId = call.argument<String>("selectedBoardId") ?: ""
+                    val boardsJson = call.argument<String>("boardsJson") ?: "[]"
+                    ChecklistHomeWidgetProvider.saveBoardsSnapshot(this, boardsJson, selectedBoardId)
                     ChecklistHomeWidgetProvider.saveAndRefresh(
                         context = this,
                         title = title,
