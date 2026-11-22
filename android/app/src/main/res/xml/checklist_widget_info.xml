@@ -3,6 +3,7 @@
     android:minWidth="180dp"
     android:minHeight="100dp"
     android:initialLayout="@layout/checklist_widget"
+    android:configure="com.example.exm1.ChecklistWidgetConfigureActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:updatePeriodMillis="1800000"
