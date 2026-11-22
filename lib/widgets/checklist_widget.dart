@@ -24,6 +24,7 @@ class ChecklistWidgetService {
     required List<ChecklistWidgetBoardOption> boards,
     required String selectedBoardId,
     required int backgroundColor,
+    required int textColor,
     required String fontFamily,
     required List<String> Function(ChecklistWidgetBoardOption board) itemsFor,
   }) async {
@@ -40,6 +41,7 @@ class ChecklistWidgetService {
         'title': selected?.title ?? 'چک‌لیستی انتخاب نشده',
         'items': selected == null ? <String>[] : itemsFor(selected),
         'backgroundColor': backgroundColor,
+        'textColor': textColor,
         'fontFamily': fontFamily,
         'selectedBoardId': selectedBoardId,
         'boardsJson': jsonEncode(boards.map((board) => {
@@ -60,15 +62,19 @@ class ChecklistWidgetService {
 /// Checklist selection is intentionally available only by tapping the widget.
 class ChecklistWidgetSettings extends StatelessWidget {
   final int backgroundColor;
+  final int textColor;
   final String fontFamily;
   final VoidCallback onChangeBackground;
+  final VoidCallback onChangeTextColor;
   final ValueChanged<String> onFontChanged;
 
   const ChecklistWidgetSettings({
     super.key,
     required this.backgroundColor,
+    required this.textColor,
     required this.fontFamily,
     required this.onChangeBackground,
+    required this.onChangeTextColor,
     required this.onFontChanged,
   });
 
@@ -87,6 +93,13 @@ class ChecklistWidgetSettings extends StatelessWidget {
           title: const Text('رنگ پس‌زمینه ویجت'),
           subtitle: const Text('تغییر رنگ پس‌زمینه صفحه اصلی'),
           onTap: onChangeBackground,
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.format_color_text, color: Color(textColor)),
+          title: const Text('رنگ متن ویجت'),
+          subtitle: const Text('تغییر رنگ نوشته‌های ویجت'),
+          onTap: onChangeTextColor,
         ),
         DropdownButtonFormField<String>(
           initialValue: fontFamily,
