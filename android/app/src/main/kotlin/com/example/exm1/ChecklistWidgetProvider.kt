@@ -6,6 +6,10 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.TypefaceSpan
+import android.util.TypedValue
 import android.widget.RemoteViews
 import org.json.JSONArray
 
@@ -28,6 +32,10 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
             val raw = flutterPrefs.getString("flutter.boards", "[]") ?: "[]"
             val widgetPrefs = context.getSharedPreferences("APPCHEK_WIDGETS", Context.MODE_PRIVATE)
             val selectedBoardId = widgetPrefs.getString("board_$widgetId", null)
+            val backgroundColor = flutterPrefs.getInt("flutter.widgetBgColor", 0xFF6658D3.toInt())
+            val textColor = flutterPrefs.getInt("flutter.widgetTextColor", 0xFFFFFFFF.toInt())
+            val fontSize = flutterPrefs.getFloat("flutter.widgetFontSize", 14f)
+            val fontFamily = flutterPrefs.getString("flutter.widgetFontFamily", "sans-serif") ?: "sans-serif"
 
             var heading = "انتخاب چک‌لیست"
             var content = "برای انتخاب چک‌لیست، ویجت را لمس کن."
@@ -64,8 +72,19 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
             }
 
             val views = RemoteViews(context.packageName, R.layout.checklist_widget)
-            views.setTextViewText(R.id.widget_title, heading)
-            views.setTextViewText(R.id.widget_items, content)
+            views.setInt(R.id.widget_root, "setBackgroundColor", backgroundColor)
+            val titleText = SpannableString(heading).apply {
+                setSpan(TypefaceSpan(fontFamily), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            val itemsText = SpannableString(content).apply {
+                setSpan(TypefaceSpan(fontFamily), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            views.setTextViewText(R.id.widget_title, titleText)
+            views.setTextViewText(R.id.widget_items, itemsText)
+            views.setTextColor(R.id.widget_title, textColor)
+            views.setTextColor(R.id.widget_items, textColor)
+            views.setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, fontSize + 2f)
+            views.setTextViewTextSize(R.id.widget_items, TypedValue.COMPLEX_UNIT_SP, fontSize)
 
             // Tapping the widget opens the checklist picker, not the app home screen.
             val pickerIntent = Intent(context, ChecklistWidgetConfigureActivity::class.java).apply {
