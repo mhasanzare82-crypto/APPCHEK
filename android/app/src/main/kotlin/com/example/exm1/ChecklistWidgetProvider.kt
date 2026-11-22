@@ -27,14 +27,26 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
             manager.getAppWidgetIds(component).forEach { updateWidget(context, manager, it) }
         }
 
+        /**
+         * Flutter's SharedPreferences Android implementation stores Dart int values as Long.
+         * Reading those entries with SharedPreferences.getInt() throws ClassCastException,
+         * which can crash the launcher/app while the widget is first being created.
+         * Read numeric values through Number instead to support Flutter's stored types safely.
+         */
+        private fun numberPref(
+            prefs: android.content.SharedPreferences,
+            key: String,
+            defaultValue: Number
+        ): Number = (prefs.all[key] as? Number) ?: defaultValue
+
         private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val raw = flutterPrefs.getString("flutter.boards", "[]") ?: "[]"
             val widgetPrefs = context.getSharedPreferences("APPCHEK_WIDGETS", Context.MODE_PRIVATE)
             val selectedBoardId = widgetPrefs.getString("board_$widgetId", null)
-            val backgroundColor = flutterPrefs.getInt("flutter.widgetBgColor", 0xFF6658D3.toInt())
-            val textColor = flutterPrefs.getInt("flutter.widgetTextColor", 0xFFFFFFFF.toInt())
-            val fontSize = flutterPrefs.getFloat("flutter.widgetFontSize", 14f)
+            val backgroundColor = numberPref(flutterPrefs, "flutter.widgetBgColor", 0xFF6658D3.toLong()).toLong().toInt()
+            val textColor = numberPref(flutterPrefs, "flutter.widgetTextColor", 0xFFFFFFFFL).toLong().toInt()
+            val fontSize = numberPref(flutterPrefs, "flutter.widgetFontSize", 14f).toFloat()
             val fontFamily = flutterPrefs.getString("flutter.widgetFontFamily", "sans-serif") ?: "sans-serif"
 
             var heading = "انتخاب چک‌لیست"
