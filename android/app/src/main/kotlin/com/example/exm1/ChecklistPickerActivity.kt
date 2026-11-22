@@ -49,11 +49,11 @@ class ChecklistPickerActivity : Activity() {
                         val row = (convertView as? TextView) ?: TextView(this@ChecklistPickerActivity)
                         row.text = getItem(position)
                         row.setTextColor(Color.WHITE)
-                        row.textSize = 14f
+                        row.textSize = 13f
                         row.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                         row.textDirection = View.TEXT_DIRECTION_FIRST_STRONG
-                        row.setPadding(dp(12), dp(7), dp(12), dp(7))
-                        row.minHeight = dp(36)
+                        row.setPadding(dp(9), dp(4), dp(9), dp(4))
+                        row.minHeight = dp(30)
 
                         row.background = GradientDrawable().apply {
                             setColor(Color.rgb(38, 54, 75))
@@ -111,7 +111,7 @@ class ChecklistPickerActivity : Activity() {
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.white)
         dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.76f).toInt(),
+            (resources.displayMetrics.widthPixels * 0.70f).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
 
@@ -120,7 +120,7 @@ class ChecklistPickerActivity : Activity() {
         dialog.listView?.post {
             val listView = dialog.listView ?: return@post
             val adapter = listView.adapter ?: return@post
-            val maxHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
+            val maxHeight = (resources.displayMetrics.heightPixels * 0.38f).toInt()
             val widthSpec = View.MeasureSpec.makeMeasureSpec(
                 listView.width,
                 View.MeasureSpec.EXACTLY
