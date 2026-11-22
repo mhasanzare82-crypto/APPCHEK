@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import org.json.JSONArray
-import kotlin.random.Random
 
 class ChecklistWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -27,17 +26,25 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
         private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val raw = flutterPrefs.getString("flutter.boards", "[]") ?: "[]"
-            var heading = "ویجت چک‌لیست"
-            var content = "از منوی سه‌نقطه چک‌لیست‌ها، گزینه «نمایش در ویجت» را برای چند چک‌لیست فعال کن."
+            val widgetPrefs = context.getSharedPreferences("APPCHEK_WIDGETS", Context.MODE_PRIVATE)
+            val selectedBoardId = widgetPrefs.getString("board_$widgetId", null)
+
+            var heading = "انتخاب چک‌لیست"
+            var content = "برای انتخاب چک‌لیست، ویجت را لمس کن."
             try {
                 val boards = JSONArray(raw)
-                val eligible = ArrayList<org.json.JSONObject>()
-                for (i in 0 until boards.length()) {
-                    val board = boards.optJSONObject(i) ?: continue
-                    if (board.optBoolean("showInWidget", false)) eligible.add(board)
+                var selected: org.json.JSONObject? = null
+                if (selectedBoardId != null) {
+                    for (i in 0 until boards.length()) {
+                        val board = boards.optJSONObject(i) ?: continue
+                        if (board.optString("id") == selectedBoardId) {
+                            selected = board
+                            break
+                        }
+                    }
                 }
-                if (eligible.isNotEmpty()) {
-                    val selected = eligible[Random.nextInt(eligible.size)]
+
+                if (selected != null) {
                     heading = selected.optString("title", "چک‌لیست")
                     val items = selected.optJSONArray("items") ?: JSONArray()
                     val lines = ArrayList<String>()
@@ -47,6 +54,10 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
                         if (text.isNotEmpty()) lines.add("• $text")
                     }
                     content = if (lines.isEmpty()) "این چک‌لیست موردی ندارد." else lines.joinToString("\n")
+                } else if (selectedBoardId != null) {
+                    content = "چک‌لیست انتخاب‌شده پیدا نشد. برای انتخاب دوباره لمس کن."
+                } else if (boards.length() == 0) {
+                    content = "ابتدا در برنامه یک چک‌لیست بساز، سپس ویجت را لمس کن."
                 }
             } catch (_: Exception) {
                 content = "برای نمایش چک‌لیست، برنامه را باز و دوباره ذخیره کن."
@@ -55,16 +66,19 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.checklist_widget)
             views.setTextViewText(R.id.widget_title, heading)
             views.setTextViewText(R.id.widget_items, content)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+
+            // Tapping the widget opens the checklist picker, not the app home screen.
+            val pickerIntent = Intent(context, ChecklistWidgetConfigureActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
-            if (launchIntent != null) {
-                val pending = PendingIntent.getActivity(
-                    context, widgetId, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pending)
-            }
+            val pending = PendingIntent.getActivity(
+                context,
+                widgetId,
+                pickerIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_root, pending)
             manager.updateAppWidget(widgetId, views)
         }
     }
