@@ -140,7 +140,7 @@ class _HomeState extends State<Home>{
   await showDialog<void>(context:ctx,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,refresh)=>AlertDialog(
    title:const Text('مورد جدید'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    TextField(controller:title,autofocus:true,style:TextStyle(fontSize:widget.owner.inputSize*15/widget.owner.size,fontFamily:widget.owner.family),decoration:const InputDecoration(labelText:'عنوان مورد',hintText:'عنوان چک‌لیست را بنویس',border:OutlineInputBorder()),onChanged:(_)=>refresh((){})),
+    TextField(controller:title,autofocus:true,style:TextStyle(fontSize:widget.owner.inputSize*15/widget.owner.size,fontFamily:widget.owner.family),decoration:const InputDecoration(labelText:'عنوان مورد',hintText:'عنوان مورد را بنویس',border:OutlineInputBorder()),onChanged:(_)=>refresh((){})),
     if(title.text.trim().isNotEmpty)...[
      const SizedBox(height:12),
      Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:Theme.of(dialogContext).colorScheme.surfaceContainerHighest.withOpacity(.45),borderRadius:BorderRadius.circular(12),border:Border.all(color:Theme.of(dialogContext).colorScheme.outlineVariant)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
