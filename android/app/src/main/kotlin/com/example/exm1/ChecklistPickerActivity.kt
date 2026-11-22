@@ -20,7 +20,7 @@ class ChecklistPickerActivity:Activity(){
   val dlg=AlertDialog.Builder(this).setTitle("انتخاب چک‌لیست برای ویجت")
    .setAdapter(ArrayAdapter(this,android.R.layout.simple_list_item_1,labels)){_,index->
     val b=candidates[index];val raw=b.optJSONArray("items")?:JSONArray();val output=ArrayList<String>()
-    for(i in 0 until raw.length()){val item=raw.optJSONObject(i);if(item!=null){val text=item.optString("text","").trim();if(text.isNotEmpty()){val mark=if(item.optBoolean("done",false))"✓" else "•";val desc=item.optString("description","").trim();output.add("$mark $text${if(desc.isEmpty())"" else " — $desc"}")}}else{val text=raw.optString(i).trim();if(text.isNotEmpty())output.add("• $text")}}
+    for(i in 0 until raw.length()){val item=raw.optJSONObject(i);if(item!=null){val text=item.optString("text","").trim();if(text.isNotEmpty()){val mark=if(item.optBoolean("done",false))"✓" else "•";val desc=item.optString("description","").trim();output.add("$mark $text${if(desc.isEmpty())"" else " — $desc"}")}}else{val text=raw.optString(i).trim();if(text.isNotEmpty())output.add(if(text.startsWith("✓")||text.startsWith("•"))text else "• $text")}}
     widgetPrefs.edit().putString("selectedBoardId",b.optString("id","")).commit()
     getSharedPreferences("FlutterSharedPreferences",MODE_PRIVATE).edit().putString("flutter.selectedWidgetBoardId",b.optString("id","")).apply()
     ChecklistHomeWidgetProvider.showBoard(this,b.optString("title","چک‌لیست"),output);finish()
