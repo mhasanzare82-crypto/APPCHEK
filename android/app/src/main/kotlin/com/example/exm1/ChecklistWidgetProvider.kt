@@ -15,7 +15,14 @@ import org.json.JSONArray
 
 class ChecklistWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { updateWidget(context, manager, it) }
+        ids.forEach { id ->
+            try {
+                updateWidget(context, manager, id)
+            } catch (error: Throwable) {
+                android.util.Log.e("ChecklistWidget", "Widget update failed for id=$id", error)
+                // Keep malformed preferences from crashing the launcher broadcast.
+            }
+        }
     }
 
     companion object {
@@ -39,15 +46,21 @@ class ChecklistWidgetProvider : AppWidgetProvider() {
             defaultValue: Number
         ): Number = (prefs.all[key] as? Number) ?: defaultValue
 
+        private fun stringPref(
+            prefs: android.content.SharedPreferences,
+            key: String,
+            defaultValue: String
+        ): String = prefs.all[key] as? String ?: defaultValue
+
         private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val raw = flutterPrefs.getString("flutter.boards", "[]") ?: "[]"
+            val raw = stringPref(flutterPrefs, "flutter.boards", "[]")
             val widgetPrefs = context.getSharedPreferences("APPCHEK_WIDGETS", Context.MODE_PRIVATE)
-            val selectedBoardId = widgetPrefs.getString("board_$widgetId", null)
+            val selectedBoardId = widgetPrefs.all["board_$widgetId"] as? String
             val backgroundColor = numberPref(flutterPrefs, "flutter.widgetBgColor", 0xFF6658D3.toLong()).toLong().toInt()
             val textColor = numberPref(flutterPrefs, "flutter.widgetTextColor", 0xFFFFFFFFL).toLong().toInt()
             val fontSize = numberPref(flutterPrefs, "flutter.widgetFontSize", 14f).toFloat()
-            val fontFamily = flutterPrefs.getString("flutter.widgetFontFamily", "sans-serif") ?: "sans-serif"
+            val fontFamily = stringPref(flutterPrefs, "flutter.widgetFontFamily", "sans-serif")
 
             var heading = "انتخاب چک‌لیست"
             var content = "برای انتخاب چک‌لیست، ویجت را لمس کن."
