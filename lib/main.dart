@@ -116,13 +116,19 @@ class _AppState extends State<App> {
    Slider(value:inputSize,min:12,max:25,divisions:13,label:inputSize.round().toString(),onChanged:(v){setState(()=>inputSize=v);refresh((){});save();}),
    TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'پیش‌نمایش نوشته ورودی',border:OutlineInputBorder())),
    const Divider(height:28),
+   const Text('شخصی‌سازی ویجت',style:TextStyle(fontWeight:FontWeight.bold)),
+   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.wallpaper),title:const Text('رنگ پس‌زمینه ویجت'),subtitle:const Text('انتخاب با اسلایدر ته‌رنگ، اشباع و روشنایی'),trailing:CircleAvatar(backgroundColor:Color(widgetBgColor),radius:13),onTap:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBgColor,onChanged:(v){setState(()=>widgetBgColor=v);save();refresh((){});});}),
+   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.format_color_text),title:const Text('رنگ نوشته‌های ویجت'),trailing:CircleAvatar(backgroundColor:Color(widgetTextColor),radius:13),onTap:()async{await pickSliderColor(title:'رنگ نوشته‌های ویجت',initial:widgetTextColor,onChanged:(v){setState(()=>widgetTextColor=v);save();refresh((){});});}),
+   Text('اندازه فونت ویجت: ${widgetFontSize.round()}'),
+   Slider(value:widgetFontSize,min:10,max:24,divisions:14,label:widgetFontSize.round().toString(),onChanged:(v){setState(()=>widgetFontSize=v);refresh((){});save();}),
+   DropdownButtonFormField<String>(value:widgetFontFamily,decoration:const InputDecoration(labelText:'نوع فونت ویجت',border:OutlineInputBorder()),items:const [DropdownMenuItem(value:'sans-serif',child:Text('ساده')),DropdownMenuItem(value:'serif',child:Text('سریف')),DropdownMenuItem(value:'monospace',child:Text('تک‌فاصله')),DropdownMenuItem(value:'casual',child:Text('دست‌نویس')),DropdownMenuItem(value:'cursive',child:Text('فانتزی'))],onChanged:(v){if(v!=null){setState(()=>widgetFontFamily=v);save();refresh((){});}}),
+   const SizedBox(height:10),Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:Color(widgetBgColor),borderRadius:BorderRadius.circular(12)),child:Text('پیش‌نمایش متن ویجت',style:TextStyle(color:Color(widgetTextColor),fontFamily:widgetFontFamily,fontSize:widgetFontSize))),
+   const Divider(height:28),
    const Text('امنیت',style:TextStyle(fontWeight:FontWeight.bold)),
    SwitchListTile(contentPadding:EdgeInsets.zero,value:biometric,title:const Text('قفل اثر انگشت / تشخیص چهره'),subtitle:const Text('هنگام ورود به برنامه احراز هویت انجام می‌شود'),onChanged:(v)async{
     if(v){try{final supported=await auth.isDeviceSupported();final available=await auth.getAvailableBiometrics();if(!supported||available.isEmpty){msg('روی این دستگاه بیومتریک فعال یا قابل استفاده نیست');return;}final ok=await auth.authenticate(localizedReason:'برای فعال‌سازی قفل برنامه احراز هویت کنید',options:const AuthenticationOptions(biometricOnly:true,stickyAuth:true));if(!ok)return;}catch(_){msg('فعال‌سازی بیومتریک ناموفق بود؛ قفل صفحه و مجوزهای دستگاه را بررسی کنید');return;}}
     setState(()=>biometric=v);await save();refresh((){});
    }),
-   const Divider(height:28),
-   ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('تنظیم تم‌های رنگی'),onTap:(){Navigator.pop(c);colorSettings();}),
    const Divider(height:12),
    const Text('ورود و خروجی اطلاعات',style:TextStyle(fontWeight:FontWeight.bold)),
    ListTile(leading:const Icon(Icons.backup),title:const Text('خروجی پشتیبان'),onTap:(){Navigator.pop(c);backupOut();}),
