@@ -3,6 +3,19 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Data passed from the checklist domain to the Android home-screen widget.
+class ChecklistWidgetBoardOption {
+  final String id;
+  final String title;
+  final int itemCount;
+
+  const ChecklistWidgetBoardOption({
+    required this.id,
+    required this.title,
+    required this.itemCount,
+  });
+}
+
 /// Synchronizes checklist snapshots and appearance settings with Android.
 class ChecklistWidgetService {
   static const MethodChannel channel = MethodChannel('checklist_widget');
