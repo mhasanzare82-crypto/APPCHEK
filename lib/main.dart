@@ -64,19 +64,6 @@ class _AppState extends State<App> {
    },
   );
  }
- Future<void> selectWidgetChecklist() async {
-  final ctx=appNavigatorKey.currentContext;
-  if(ctx==null)return;
-  final chosen=await checklistWidgetService.selectChecklist(
-   context:ctx,
-   boards:boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
-  );
-  if(chosen!=null){
-   selectedWidgetBoardId=chosen;
-   await save();
-   msg('چک‌لیست ویجت به‌روزرسانی شد');
-  }
- }
  Future<void> pickSliderColor({required String title, required int initial, required ValueChanged<int> onChanged}) async {
   final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   final hsl=HSLColor.fromColor(Color(initial));
@@ -146,10 +133,8 @@ class _AppState extends State<App> {
    TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'پیش‌نمایش نوشته ورودی',border:OutlineInputBorder())),
    const Divider(height:28),
    ChecklistWidgetSettings(
-    selectedChecklistTitle:boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull?.title??'',
     backgroundColor:widgetBackground,
     fontFamily:widgetFont,
-    onSelectChecklist:(){Navigator.pop(c);selectWidgetChecklist();},
     onChangeBackground:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});},
     onFontChanged:(value)async{widgetFont=value;await save();refresh((){});},
    ),
@@ -184,7 +169,7 @@ class _HomeState extends State<Home>{
   widget.owner.msg('برای خروج، دکمه بازگشت را ${4-_backPressCount} بار دیگر پشت سر هم فشار دهید');
  }
  Board? featured;
- @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];ChecklistWidgetService.channel.setMethodCallHandler((call)async{if(call.method=='widgetOpened'&&mounted){await widget.owner.selectWidgetChecklist();}else if(call.method=='widgetChecklistSelected'&&mounted&&call.arguments is String){setState(()=>widget.owner.selectedWidgetBoardId=call.arguments as String);}});WidgetsBinding.instance.addPostFrameCallback((_)async{try{await widget.owner.syncChecklistWidget();final open=await ChecklistWidgetService.channel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
+ @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];WidgetsBinding.instance.addPostFrameCallback((_)async{try{await widget.owner.syncChecklistWidget();}catch(_){}});}
  Future<void> addItem(Board b)async{
   final title=TextEditingController();final description=TextEditingController();final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   Future<void> commit(BuildContext dialogContext)async{final value=title.text.trim();if(value.isEmpty)return;setState(()=>b.items.add(Item(uid(),value,description:description.text.trim(),color:widget.owner.randomColor())));await widget.owner.save();if(dialogContext.mounted)Navigator.pop(dialogContext);}
