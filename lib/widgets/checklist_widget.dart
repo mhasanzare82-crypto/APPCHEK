@@ -137,7 +137,7 @@ class ChecklistWidgetSettings extends StatelessWidget {
           onTap: onChangeBackground,
         ),
         DropdownButtonFormField<String>(
-          value: fontFamily,
+          initialValue: fontFamily,
           decoration: const InputDecoration(labelText: 'نوع فونت ویجت'),
           items: const [
             DropdownMenuItem(value: 'sans', child: Text('ساده')),
