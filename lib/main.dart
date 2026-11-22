@@ -135,6 +135,11 @@ class _AppState extends State<App> {
    Slider(value:inputSize,min:12,max:25,divisions:13,label:inputSize.round().toString(),onChanged:(v){setState(()=>inputSize=v);refresh((){});save();}),
    TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'پیش‌نمایش نوشته ورودی',border:OutlineInputBorder())),
    const Divider(height:28),
+   const Text('تنظیمات ویجت',style:TextStyle(fontWeight:FontWeight.bold)),
+   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.checklist_rounded),title:const Text('انتخاب چک‌لیست ویجت'),subtitle:Text(boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull?.title??'هنوز انتخاب نشده'),onTap:()async{Navigator.pop(c);await selectWidgetChecklist();}),
+   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.palette_outlined),title:const Text('رنگ پس‌زمینه ویجت'),subtitle:const Text('تغییر رنگ پس‌زمینه صفحه اصلی'),onTap:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});}),
+   DropdownButtonFormField<String>(value:widgetFont,decoration:const InputDecoration(labelText:'نوع فونت ویجت'),items:const [DropdownMenuItem(value:'sans',child:Text('ساده')),DropdownMenuItem(value:'serif',child:Text('سریف')),DropdownMenuItem(value:'mono',child:Text('تک‌فاصله‌ای'))],onChanged:(v)async{if(v==null)return;widgetFont=v;await save();refresh((){});}),
+   const Divider(height:28),
    const Text('امنیت',style:TextStyle(fontWeight:FontWeight.bold)),
    SwitchListTile(contentPadding:EdgeInsets.zero,value:biometric,title:const Text('قفل اثر انگشت / تشخیص چهره'),subtitle:const Text('هنگام ورود به برنامه احراز هویت انجام می‌شود'),onChanged:(v)async{
     if(v){try{final supported=await auth.isDeviceSupported();final available=await auth.getAvailableBiometrics();if(!supported||available.isEmpty){msg('روی این دستگاه بیومتریک فعال یا قابل استفاده نیست');return;}final ok=await auth.authenticate(localizedReason:'برای فعال‌سازی قفل برنامه احراز هویت کنید',options:const AuthenticationOptions(biometricOnly:true,stickyAuth:true));if(!ok)return;}catch(_){msg('فعال‌سازی بیومتریک ناموفق بود؛ قفل صفحه و مجوزهای دستگاه را بررسی کنید');return;}}
