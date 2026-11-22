@@ -54,7 +54,7 @@ class MainActivity : FlutterFragmentActivity() {
                     val title = call.argument<String>("title") ?: "چک‌لیستی انتخاب نشده"
                     val items = call.argument<List<String>>("items") ?: emptyList()
                     val backgroundColor = call.argument<Int>("backgroundColor") ?: 0xFF202124.toInt()
-                    val textColor = call.argument<Int>("textColor") ?: 0xFFFFFFFF.toInt()
+                    val textColor = (call.argument<Number>("textColor")?.toInt()) ?: 0xFFFFFFFF.toInt()
                     val fontFamily = call.argument<String>("fontFamily") ?: "sans"
                     val selectedBoardId = call.argument<String>("selectedBoardId") ?: ""
                     val boardsJson = call.argument<String>("boardsJson") ?: "[]"
