@@ -31,8 +31,7 @@
         android:textColor="#FFFFFFFF"
         android:textSize="13sp"
         android:gravity="top"
-        android:maxLines="12"
-        android:ellipsize="end" />
+        />
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
