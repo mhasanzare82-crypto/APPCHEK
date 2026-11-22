@@ -12,9 +12,9 @@ import 'package:local_auth/local_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'widgets/checklist_widget.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
-const MethodChannel checklistWidgetChannel = MethodChannel('checklist_widget');
 void main() async { WidgetsFlutterBinding.ensureInitialized(); runApp(const App()); }
 String uid() => DateTime.now().microsecondsSinceEpoch.toString();
 class Item {
@@ -32,6 +32,7 @@ class Board {
 }
 class App extends StatefulWidget { const App({super.key}); @override State<App> createState()=>_AppState(); }
 class _AppState extends State<App> {
+ final ChecklistWidgetService checklistWidgetService=ChecklistWidgetService();
  final auth=LocalAuthentication(); List<Folder> folders=[]; List<Board> boards=[];
  bool ready=false,locked=false,biometric=false; List<int> palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2]; double size=15,inputSize=15; String family='Vazirmatn'; Uint8List? fontBytes;
  int widgetBackground=0xFF202124; String widgetFont='sans'; String selectedWidgetBoardId='';
@@ -52,60 +53,28 @@ class _AppState extends State<App> {
  Future<void> loadFont(Uint8List b) async {final l=FontLoader('UserFont')..addFont(Future.value(ByteData.sublistView(b)));await l.load();}
  int randomColor()=>palette[math.Random().nextInt(palette.length)];
  Future<void> syncChecklistWidget() async {
-  final selected=boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull;
-  try {
-   await checklistWidgetChannel.invokeMethod('updateWidget', {
-    'title': selected?.title ?? 'چک‌لیستی انتخاب نشده',
-    'items': selected?.items.map((i)=>'${i.done?'✓':'•'} ${i.text}${i.description.trim().isEmpty?'':' — ${i.description}'}').toList() ?? <String>[],
-    'backgroundColor': widgetBackground,
-    'fontFamily': widgetFont,
-   });
-  } catch (_) {}
+  await checklistWidgetService.sync(
+   boards: boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
+   selectedBoardId: selectedWidgetBoardId,
+   backgroundColor: widgetBackground,
+   fontFamily: widgetFont,
+   itemsFor: (option) {
+    final board=boards.firstWhere((entry)=>entry.id==option.id);
+    return board.items.map((item)=>'${item.done?'✓':'•'} ${item.text}${item.description.trim().isEmpty?'':' — ${item.description}'}').toList();
+   },
+  );
  }
  Future<void> selectWidgetChecklist() async {
-  final ctx = appNavigatorKey.currentContext;
-  if (ctx == null) return;
-
-  final chosen = await showModalBottomSheet<String>(
-    context: ctx,
-    showDragHandle: true,
-    builder: (sheetContext) {
-      if (boards.isEmpty) {
-        return const SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('ابتدا یک چک‌لیست بساز'),
-          ),
-        );
-      }
-      return SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const ListTile(
-              title: Text(
-                'انتخاب چک‌لیست برای ویجت',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            ...boards.map(
-              (board) => ListTile(
-                leading: const Icon(Icons.checklist_rounded),
-                title: Text(board.title),
-                subtitle: Text('${board.items.length} مورد'),
-                onTap: () => Navigator.pop(sheetContext, board.id),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
+  final ctx=appNavigatorKey.currentContext;
+  if(ctx==null)return;
+  final chosen=await checklistWidgetService.selectChecklist(
+   context:ctx,
+   boards:boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
   );
-
-  if (chosen != null) {
-    selectedWidgetBoardId = chosen;
-    await save();
-    msg('چک‌لیست ویجت به‌روزرسانی شد');
+  if(chosen!=null){
+   selectedWidgetBoardId=chosen;
+   await save();
+   msg('چک‌لیست ویجت به‌روزرسانی شد');
   }
  }
  Future<void> pickSliderColor({required String title, required int initial, required ValueChanged<int> onChanged}) async {
@@ -176,10 +145,14 @@ class _AppState extends State<App> {
    Slider(value:inputSize,min:12,max:25,divisions:13,label:inputSize.round().toString(),onChanged:(v){setState(()=>inputSize=v);refresh((){});save();}),
    TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'پیش‌نمایش نوشته ورودی',border:OutlineInputBorder())),
    const Divider(height:28),
-   const Text('تنظیمات ویجت',style:TextStyle(fontWeight:FontWeight.bold)),
-   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.checklist_rounded),title:const Text('انتخاب چک‌لیست ویجت'),subtitle:Text(boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull?.title??'هنوز انتخاب نشده'),onTap:()async{Navigator.pop(c);await selectWidgetChecklist();}),
-   ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.palette_outlined),title:const Text('رنگ پس‌زمینه ویجت'),subtitle:const Text('تغییر رنگ پس‌زمینه صفحه اصلی'),onTap:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});}),
-   DropdownButtonFormField<String>(value:widgetFont,decoration:const InputDecoration(labelText:'نوع فونت ویجت'),items:const [DropdownMenuItem(value:'sans',child:Text('ساده')),DropdownMenuItem(value:'serif',child:Text('سریف')),DropdownMenuItem(value:'mono',child:Text('تک‌فاصله‌ای'))],onChanged:(v)async{if(v==null)return;widgetFont=v;await save();refresh((){});}),
+   ChecklistWidgetSettings(
+    selectedChecklistTitle:boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull?.title??'',
+    backgroundColor:widgetBackground,
+    fontFamily:widgetFont,
+    onSelectChecklist:(){Navigator.pop(c);selectWidgetChecklist();},
+    onChangeBackground:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});},
+    onFontChanged:(value)async{widgetFont=value;await save();refresh((){});},
+   ),
    const Divider(height:28),
    const Text('امنیت',style:TextStyle(fontWeight:FontWeight.bold)),
    SwitchListTile(contentPadding:EdgeInsets.zero,value:biometric,title:const Text('قفل اثر انگشت / تشخیص چهره'),subtitle:const Text('هنگام ورود به برنامه احراز هویت انجام می‌شود'),onChanged:(v)async{
@@ -211,7 +184,7 @@ class _HomeState extends State<Home>{
   widget.owner.msg('برای خروج، دکمه بازگشت را ${4-_backPressCount} بار دیگر پشت سر هم فشار دهید');
  }
  Board? featured;
- @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];checklistWidgetChannel.setMethodCallHandler((call)async{if(call.method=='widgetOpened'&&mounted)await widget.owner.selectWidgetChecklist();});WidgetsBinding.instance.addPostFrameCallback((_)async{try{await widget.owner.syncChecklistWidget();final open=await checklistWidgetChannel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
+ @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];ChecklistWidgetService.channel.setMethodCallHandler((call)async{if(call.method=='widgetOpened'&&mounted)await widget.owner.selectWidgetChecklist();});WidgetsBinding.instance.addPostFrameCallback((_)async{try{await widget.owner.syncChecklistWidget();final open=await ChecklistWidgetService.channel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
  Future<void> addItem(Board b)async{
   final title=TextEditingController();final description=TextEditingController();final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   Future<void> commit(BuildContext dialogContext)async{final value=title.text.trim();if(value.isEmpty)return;setState(()=>b.items.add(Item(uid(),value,description:description.text.trim(),color:widget.owner.randomColor())));await widget.owner.save();if(dialogContext.mounted)Navigator.pop(dialogContext);}
