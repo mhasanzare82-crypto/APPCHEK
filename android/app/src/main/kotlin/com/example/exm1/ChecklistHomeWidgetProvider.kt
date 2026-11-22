@@ -10,6 +10,9 @@ import android.widget.RemoteViews
 class ChecklistHomeWidgetProvider : AppWidgetProvider() {
  companion object {
   private const val PREFS="checklist_home_widget"
+  fun saveBoardsSnapshot(context:Context,boardsJson:String,selectedBoardId:String){
+   context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("boardsJson",boardsJson).putString("selectedBoardId",selectedBoardId).commit()
+  }
   fun saveAndRefresh(context:Context,title:String,items:List<String>,backgroundColor:Int,fontFamily:String){
    context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("title",title).putString("items",items.joinToString("\n")).putInt("backgroundColor",backgroundColor).putString("fontFamily",fontFamily).commit();refreshAll(context)
   }
