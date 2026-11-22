@@ -114,6 +114,39 @@ class ChecklistPickerActivity : Activity() {
             (resources.displayMetrics.widthPixels * 0.76f).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+
+        // Keep short lists naturally sized, but cap long lists to a screen-relative
+        // height so the native ListView scrolls instead of expanding off-screen.
+        dialog.listView?.post {
+            val listView = dialog.listView ?: return@post
+            val adapter = listView.adapter ?: return@post
+            val maxHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(
+                listView.width,
+                View.MeasureSpec.EXACTLY
+            )
+            var measuredHeight = listView.paddingTop + listView.paddingBottom
+
+            for (position in 0 until adapter.count) {
+                val row = adapter.getView(position, null, listView)
+                row.measure(
+                    widthSpec,
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                measuredHeight += row.measuredHeight
+                if (position < adapter.count - 1) {
+                    measuredHeight += listView.dividerHeight
+                }
+                if (measuredHeight >= maxHeight) break
+            }
+
+            val targetHeight = measuredHeight.coerceAtMost(maxHeight)
+            listView.layoutParams = listView.layoutParams.apply {
+                height = targetHeight
+            }
+            listView.isVerticalScrollBarEnabled = adapter.count > 5
+            listView.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        }
     }
 
     private fun dp(value: Int): Int =
