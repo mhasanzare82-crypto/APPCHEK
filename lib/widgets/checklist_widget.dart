@@ -79,7 +79,7 @@ class ChecklistWidgetSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final border = theme.colorScheme.outlineVariant.withOpacity(.65);
+    final border = theme.colorScheme.outlineVariant.withValues(alpha: .65);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -95,7 +95,7 @@ class ChecklistWidgetSettings extends StatelessWidget {
         border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(.07),
+            color: theme.colorScheme.shadow.withValues(alpha: .07),
             blurRadius: 18,
             offset: const Offset(0, 7),
           ),
@@ -161,7 +161,7 @@ class ChecklistWidgetSettings extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: fontFamily,
+            initialValue: fontFamily,
             isExpanded: true,
             decoration: InputDecoration(
               filled: true,
@@ -220,7 +220,7 @@ class _WidgetAppearanceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surface.withOpacity(.82),
+      color: theme.colorScheme.surface.withValues(alpha: .82),
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         onTap: onTap,
@@ -251,12 +251,12 @@ class _WidgetAppearanceTile extends StatelessWidget {
                   color: color,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: theme.colorScheme.outline.withOpacity(.55),
+                    color: theme.colorScheme.outline.withValues(alpha: .55),
                     width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(.28),
+                      color: color.withValues(alpha: .28),
                       blurRadius: 7,
                       offset: const Offset(0, 2),
                     ),
