@@ -40,7 +40,8 @@ class _AppState extends State<App> {
    folders=(jsonDecode(p.getString('folders')??'[]') as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??'').toString(),color:(m['color']??0xFF6658D3) as int)).toList();
    boards=(jsonDecode(p.getString('boards')??'[]') as List).whereType<Map>().map(Board.from).toList();
    size=p.getDouble('size')??15; inputSize=p.getDouble('inputSize')??15; biometric=p.getBool('bio')??false; palette=(p.getStringList('palette')??[]).map((v)=>int.tryParse(v)??0xFF6658D3).toList(); if(palette.isEmpty)palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2];
-   widgetBgColor=p.getInt('widgetBgColor')??0xFF6658D3; widgetTextColor=p.getInt('widgetTextColor')??0xFFFFFFFF; widgetFontSize=p.getDouble('widgetFontSize')??14; widgetFontFamily=p.getString('widgetFontFamily')??'sans-serif';\n   final raw=p.getString('font'); if(raw!=null){fontBytes=base64Decode(raw);await loadFont(fontBytes!);family='UserFont';}
+   widgetBgColor=p.getInt('widgetBgColor')??0xFF6658D3; widgetTextColor=p.getInt('widgetTextColor')??0xFFFFFFFF; widgetFontSize=p.getDouble('widgetFontSize')??14; widgetFontFamily=p.getString('widgetFontFamily')??'sans-serif';
+   final raw=p.getString('font'); if(raw!=null){fontBytes=base64Decode(raw);await loadFont(fontBytes!);family='UserFont';}
   } catch (_) {}
   if(mounted)setState(()=>ready=true);
   if(biometric){locked=true;setState((){});unlock();}
