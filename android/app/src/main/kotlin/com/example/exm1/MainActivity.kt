@@ -7,6 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     private var widgetLaunchPending = false
+    private var widgetChannel: MethodChannel? = null
     private val channelName = "checklist_widget"
     private val openWidgetAction = "com.example.exm1.OPEN_CHECKLIST_WIDGET"
     private val updateWidgetAction = "com.example.exm1.UPDATE_CHECKLIST_WIDGET"
@@ -19,13 +20,16 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.action == openWidgetAction) widgetLaunchPending = true
+        if (intent.action == openWidgetAction) {
+            widgetLaunchPending = true
+            widgetChannel?.invokeMethod("widgetOpened", null)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
-            .setMethodCallHandler { call, result ->
+        widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        widgetChannel?.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "consumeWidgetLaunch" -> {
                         val pending = widgetLaunchPending
