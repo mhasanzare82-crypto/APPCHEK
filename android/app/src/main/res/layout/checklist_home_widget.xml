@@ -19,6 +19,32 @@
         android:ellipsize="end" />
 
     <TextView
+        android:id="@+id/widget_title_serif"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="چک‌لیست‌های من"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:fontFamily="serif"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_title_mono"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="چک‌لیست‌های من"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/widget_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
@@ -70,4 +96,26 @@
         android:text="برای انتخاب لمس کن  ›"
         android:textColor="#CCFFFFFF"
         android:textSize="10sp" />
+
+    <TextView
+        android:id="@+id/widget_footer_serif"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:text="برای انتخاب لمس کن  ›"
+        android:textColor="#CCFFFFFF"
+        android:textSize="10sp"
+        android:fontFamily="serif"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_footer_mono"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:text="برای انتخاب لمس کن  ›"
+        android:textColor="#CCFFFFFF"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:visibility="gone" />
 </LinearLayout>
