@@ -35,8 +35,8 @@ class ChecklistPickerActivity : Activity() {
             }
         }
 
-        // Keep this picker deliberately compact: no heading, no item counts,
-        // and high-contrast checklist names on individual light rows.
+        // The picker intentionally has no heading or item counts.
+        // Compact dark rows with white text keep checklist names readable.
         val builder = AlertDialog.Builder(this)
             .setNegativeButton("بستن") { _, _ -> finish() }
 
@@ -48,23 +48,21 @@ class ChecklistPickerActivity : Activity() {
                     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                         val row = (convertView as? TextView) ?: TextView(this@ChecklistPickerActivity)
                         row.text = getItem(position)
-                        row.setTextColor(Color.rgb(35, 38, 48))
-                        row.textSize = 15f
+                        row.setTextColor(Color.WHITE)
+                        row.textSize = 13f
                         row.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                         row.textDirection = View.TEXT_DIRECTION_FIRST_STRONG
-                        val horizontal = dp(14)
-                        row.setPadding(horizontal, dp(11), horizontal, dp(11))
-                        row.minHeight = dp(44)
-                        val shape = GradientDrawable().apply {
-                            setColor(Color.rgb(242, 244, 249))
-                            cornerRadius = dp(9).toFloat()
+                        row.setPadding(dp(9), dp(4), dp(9), dp(4))
+                        row.minHeight = dp(30)
+
+                        row.background = GradientDrawable().apply {
+                            setColor(Color.rgb(38, 54, 75))
+                            cornerRadius = dp(8).toFloat()
                         }
-                        row.background = shape
-                        val params = AbsListViewLayoutParams(
+                        row.layoutParams = AbsListViewLayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
                         )
-                        row.layoutParams = params
                         return row
                     }
                 }
@@ -113,9 +111,42 @@ class ChecklistPickerActivity : Activity() {
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.white)
         dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.80f).toInt(),
+            (resources.displayMetrics.widthPixels * 0.70f).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+
+        // Keep short lists naturally sized, but cap long lists to a screen-relative
+        // height so the native ListView scrolls instead of expanding off-screen.
+        dialog.listView?.post {
+            val listView = dialog.listView ?: return@post
+            val adapter = listView.adapter ?: return@post
+            val maxHeight = (resources.displayMetrics.heightPixels * 0.38f).toInt()
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(
+                listView.width,
+                View.MeasureSpec.EXACTLY
+            )
+            var measuredHeight = listView.paddingTop + listView.paddingBottom
+
+            for (position in 0 until adapter.count) {
+                val row = adapter.getView(position, null, listView)
+                row.measure(
+                    widthSpec,
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                measuredHeight += row.measuredHeight
+                if (position < adapter.count - 1) {
+                    measuredHeight += listView.dividerHeight
+                }
+                if (measuredHeight >= maxHeight) break
+            }
+
+            val targetHeight = measuredHeight.coerceAtMost(maxHeight)
+            listView.layoutParams = listView.layoutParams.apply {
+                height = targetHeight
+            }
+            listView.isVerticalScrollBarEnabled = adapter.count > 5
+            listView.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        }
     }
 
     private fun dp(value: Int): Int =

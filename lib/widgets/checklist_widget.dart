@@ -84,26 +84,26 @@ class ChecklistWidgetSettings extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'تنظیمات ویجت',
+          'طراحی ظاهری ویجت',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.palette_outlined, color: Color(backgroundColor)),
           title: const Text('رنگ پس‌زمینه ویجت'),
-          subtitle: const Text('تغییر رنگ پس‌زمینه صفحه اصلی'),
+          subtitle: const Text('رنگ زمینه کارت ویجت در صفحه اصلی'),
           onTap: onChangeBackground,
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.format_color_text, color: Color(textColor)),
           title: const Text('رنگ متن ویجت'),
-          subtitle: const Text('تغییر رنگ نوشته‌های ویجت'),
+          subtitle: const Text('رنگ عنوان، متن و نوشته پایین ویجت'),
           onTap: onChangeTextColor,
         ),
         DropdownButtonFormField<String>(
           initialValue: fontFamily,
-          decoration: const InputDecoration(labelText: 'نوع فونت ویجت'),
+          decoration: const InputDecoration(labelText: 'فونت تمام نوشته‌های ویجت'),
           items: const [
             DropdownMenuItem(value: 'sans', child: Text('ساده')),
             DropdownMenuItem(value: 'serif', child: Text('سریف')),
