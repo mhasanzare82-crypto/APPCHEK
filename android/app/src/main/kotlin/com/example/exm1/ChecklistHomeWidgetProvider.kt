@@ -13,8 +13,8 @@ class ChecklistHomeWidgetProvider : AppWidgetProvider() {
   fun saveBoardsSnapshot(context:Context,boardsJson:String,selectedBoardId:String){
    context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("boardsJson",boardsJson).putString("selectedBoardId",selectedBoardId).commit()
   }
-  fun saveAndRefresh(context:Context,title:String,items:List<String>,backgroundColor:Int,fontFamily:String){
-   context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("title",title).putString("items",items.joinToString("\n")).putInt("backgroundColor",backgroundColor).putString("fontFamily",fontFamily).commit();refreshAll(context)
+  fun saveAndRefresh(context:Context,title:String,items:List<String>,backgroundColor:Int,textColor:Int,fontFamily:String){
+   context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("title",title).putString("items",items.joinToString("\n")).putInt("backgroundColor",backgroundColor).putInt("textColor",textColor).putString("fontFamily",fontFamily).commit();refreshAll(context)
   }
   fun refreshAll(context:Context){val m=AppWidgetManager.getInstance(context);m.getAppWidgetIds(ComponentName(context,ChecklistHomeWidgetProvider::class.java)).forEach{render(context,m,it)}}
   fun showBoard(context:Context,title:String,items:List<String>){context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("title",title).putString("items",items.joinToString("\n")).commit();refreshAll(context)}
@@ -22,6 +22,7 @@ class ChecklistHomeWidgetProvider : AppWidgetProvider() {
    val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);val v=RemoteViews(context.packageName,R.layout.checklist_home_widget)
    val title=p.getString("title","چک‌لیست‌های من")?:"چک‌لیست‌های من";val items=p.getString("items","")?:"";val content=if(items.isBlank())"این چک‌لیست هنوز موردی ندارد" else items
    v.setTextViewText(R.id.widget_title,title);v.setTextViewText(R.id.widget_content_sans,content);v.setTextViewText(R.id.widget_content_serif,content);v.setTextViewText(R.id.widget_content_mono,content)
+   val textColor=p.getInt("textColor",0xFFFFFFFF.toInt());v.setTextColor(R.id.widget_title,textColor);v.setTextColor(R.id.widget_content_sans,textColor);v.setTextColor(R.id.widget_content_serif,textColor);v.setTextColor(R.id.widget_content_mono,textColor);v.setTextColor(R.id.widget_footer,textColor)
    val font=p.getString("fontFamily","sans")?:"sans";val selected=when(font){"serif"->R.id.widget_content_serif;"mono"->R.id.widget_content_mono;else->R.id.widget_content_sans}
    v.setViewVisibility(R.id.widget_content_sans,if(selected==R.id.widget_content_sans)View.VISIBLE else View.GONE);v.setViewVisibility(R.id.widget_content_serif,if(selected==R.id.widget_content_serif)View.VISIBLE else View.GONE);v.setViewVisibility(R.id.widget_content_mono,if(selected==R.id.widget_content_mono)View.VISIBLE else View.GONE)
    v.setInt(R.id.widget_root,"setBackgroundColor",p.getInt("backgroundColor",0xFF202124.toInt()))
