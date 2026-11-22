@@ -63,9 +63,50 @@ class _AppState extends State<App> {
   } catch (_) {}
  }
  Future<void> selectWidgetChecklist() async {
-  final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
-  final chosen=await showModalBottomSheet<String>(context:ctx,showDragHandle:true,builder:(c)=>SafeArea(child:boards.isEmpty?const Padding(padding:EdgeInsets.all(24),child:Text('ابتدا یک چک‌لیست بساز')):ListView(shrinkWrap:true,children:[const ListTile(title:Text('انتخاب چک‌لیست برای ویجت',style:TextStyle(fontWeight:FontWeight.bold))),...boards.map((b)=>ListTile(leading:const Icon(Icons.checklist_rounded),title:Text(b.title),subtitle:Text('${b.items.length} مورد'),onTap:()=>Navigator.pop(c,b.id))])));
-  if(chosen!=null){selectedWidgetBoardId=chosen;await save();msg('چک‌لیست ویجت به‌روزرسانی شد');}
+  final ctx = appNavigatorKey.currentContext;
+  if (ctx == null) return;
+
+  final chosen = await showModalBottomSheet<String>(
+    context: ctx,
+    showDragHandle: true,
+    builder: (sheetContext) {
+      if (boards.isEmpty) {
+        return const SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('ابتدا یک چک‌لیست بساز'),
+          ),
+        );
+      }
+      return SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const ListTile(
+              title: Text(
+                'انتخاب چک‌لیست برای ویجت',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...boards.map(
+              (board) => ListTile(
+                leading: const Icon(Icons.checklist_rounded),
+                title: Text(board.title),
+                subtitle: Text('${board.items.length} مورد'),
+                onTap: () => Navigator.pop(sheetContext, board.id),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (chosen != null) {
+    selectedWidgetBoardId = chosen;
+    await save();
+    msg('چک‌لیست ویجت به‌روزرسانی شد');
+  }
  }
  Future<void> pickSliderColor({required String title, required int initial, required ValueChanged<int> onChanged}) async {
   final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
