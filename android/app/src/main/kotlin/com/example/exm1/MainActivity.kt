@@ -10,7 +10,6 @@ class MainActivity : FlutterFragmentActivity() {
     private var widgetChannel: MethodChannel? = null
     private val channelName = "checklist_widget"
     private val openWidgetAction = "com.example.exm1.OPEN_CHECKLIST_WIDGET"
-    private val updateWidgetAction = "com.example.exm1.UPDATE_CHECKLIST_WIDGET"
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,8 +20,14 @@ class MainActivity : FlutterFragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.action == openWidgetAction) {
-            widgetLaunchPending = true
-            widgetChannel?.invokeMethod("widgetOpened", null)
+            // Send a single event if Flutter is already active. Otherwise leave it
+            // pending for Flutter to consume after its widget handler is installed.
+            val channel = widgetChannel
+            if (channel != null) {
+                channel.invokeMethod("widgetOpened", null)
+            } else {
+                widgetLaunchPending = true
+            }
         }
     }
 
@@ -30,28 +35,28 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
         widgetChannel?.setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "consumeWidgetLaunch" -> {
-                        val pending = widgetLaunchPending
-                        widgetLaunchPending = false
-                        result.success(pending)
-                    }
-                    "updateWidget" -> {
-                        val title = call.argument<String>("title") ?: "چک‌لیستی انتخاب نشده"
-                        val items = call.argument<List<String>>("items") ?: emptyList()
-                        val backgroundColor = call.argument<Int>("backgroundColor") ?: 0xFF202124.toInt()
-                        val fontFamily = call.argument<String>("fontFamily") ?: "sans"
-                        sendBroadcast(Intent(this, ChecklistHomeWidgetProvider::class.java).apply {
-                            action = updateWidgetAction
-                            putExtra("title", title)
-                            putStringArrayListExtra("items", ArrayList(items))
-                            putExtra("backgroundColor", backgroundColor)
-                            putExtra("fontFamily", fontFamily)
-                        })
-                        result.success(true)
-                    }
-                    else -> result.notImplemented()
+            when (call.method) {
+                "consumeWidgetLaunch" -> {
+                    val pending = widgetLaunchPending
+                    widgetLaunchPending = false
+                    result.success(pending)
                 }
+                "updateWidget" -> {
+                    val title = call.argument<String>("title") ?: "چک‌لیستی انتخاب نشده"
+                    val items = call.argument<List<String>>("items") ?: emptyList()
+                    val backgroundColor = call.argument<Int>("backgroundColor") ?: 0xFF202124.toInt()
+                    val fontFamily = call.argument<String>("fontFamily") ?: "sans"
+                    ChecklistHomeWidgetProvider.saveAndRefresh(
+                        context = this,
+                        title = title,
+                        items = items,
+                        backgroundColor = backgroundColor,
+                        fontFamily = fontFamily
+                    )
+                    result.success(true)
+                }
+                else -> result.notImplemented()
             }
+        }
     }
 }
