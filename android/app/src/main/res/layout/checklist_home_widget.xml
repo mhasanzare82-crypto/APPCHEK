@@ -5,7 +5,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="@drawable/checklist_widget_bg">
+    android:background="@drawable/checklist_widget_bg"
+    android:backgroundTintMode="multiply">
 
     <TextView
         android:id="@+id/widget_title"
