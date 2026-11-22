@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="WidgetChecklistSans" parent="@android:style/TextAppearance.Medium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+    <style name="WidgetChecklistSerif" parent="@android:style/TextAppearance.Medium">
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+    <style name="WidgetChecklistMono" parent="@android:style/TextAppearance.Medium">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+    <style name="WidgetChecklistTitle" parent="@android:style/TextAppearance.Medium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

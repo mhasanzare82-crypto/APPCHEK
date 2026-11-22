@@ -12,6 +12,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'widgets/checklist_widget.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 void main() async { WidgetsFlutterBinding.ensureInitialized(); runApp(const App()); }
@@ -31,23 +32,51 @@ class Board {
 }
 class App extends StatefulWidget { const App({super.key}); @override State<App> createState()=>_AppState(); }
 class _AppState extends State<App> {
+ final ChecklistWidgetService checklistWidgetService=ChecklistWidgetService();
  final auth=LocalAuthentication(); List<Folder> folders=[]; List<Board> boards=[];
  bool ready=false,locked=false,biometric=false; List<int> palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2]; double size=15,inputSize=15; String family='Vazirmatn'; Uint8List? fontBytes;
+ int widgetBackground=0xFF202124; String widgetFont='sans'; String selectedWidgetBoardId='';
  @override void initState(){super.initState();load();}
  Future<void> load() async {
   final p=await SharedPreferences.getInstance();
   try {
    folders=(jsonDecode(p.getString('folders')??'[]') as List).whereType<Map>().map((m)=>Folder((m['id']??uid()).toString(),(m['name']??'').toString(),color:(m['color']??0xFF6658D3) as int)).toList();
    boards=(jsonDecode(p.getString('boards')??'[]') as List).whereType<Map>().map(Board.from).toList();
-   size=p.getDouble('size')??15; inputSize=p.getDouble('inputSize')??15; biometric=p.getBool('bio')??false; palette=(p.getStringList('palette')??[]).map((v)=>int.tryParse(v)??0xFF6658D3).toList(); if(palette.isEmpty)palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2];
+   size=p.getDouble('size')??15; inputSize=p.getDouble('inputSize')??15; biometric=p.getBool('bio')??false;
+   widgetBackground=p.getInt('widgetBackground')??0xFF202124; widgetFont=p.getString('widgetFont')??'sans'; selectedWidgetBoardId=p.getString('selectedWidgetBoardId')??''; palette=(p.getStringList('palette')??[]).map((v)=>int.tryParse(v)??0xFF6658D3).toList(); if(palette.isEmpty)palette=[0xFF6658D3,0xFF00897B,0xFFEF6C00,0xFF1976D2,0xFFD81B60,0xFF7E57C2];
    final raw=p.getString('font'); if(raw!=null){fontBytes=base64Decode(raw);await loadFont(fontBytes!);family='UserFont';}
   } catch (_) {}
   if(mounted)setState(()=>ready=true);
   if(biometric){locked=true;setState((){});unlock();}
  }
- Future<void> save() async {final p=await SharedPreferences.getInstance();await p.setString('folders',jsonEncode(folders.map((e)=>e.toJson()).toList()));await p.setString('boards',jsonEncode(boards.map((e)=>e.toJson()).toList()));await p.setDouble('size',size);await p.setDouble('inputSize',inputSize);await p.setStringList('palette',palette.map((v)=>v.toString()).toList());await p.setBool('bio',biometric);if(fontBytes!=null)await p.setString('font',base64Encode(fontBytes!));}
+ Future<void> save() async {final p=await SharedPreferences.getInstance();await p.setString('folders',jsonEncode(folders.map((e)=>e.toJson()).toList()));await p.setString('boards',jsonEncode(boards.map((e)=>e.toJson()).toList()));await p.setDouble('size',size);await p.setDouble('inputSize',inputSize);await p.setStringList('palette',palette.map((v)=>v.toString()).toList());await p.setBool('bio',biometric);if(fontBytes!=null)await p.setString('font',base64Encode(fontBytes!));await p.setInt('widgetBackground',widgetBackground);await p.setString('widgetFont',widgetFont);await p.setString('selectedWidgetBoardId',selectedWidgetBoardId);await syncChecklistWidget();}
  Future<void> loadFont(Uint8List b) async {final l=FontLoader('UserFont')..addFont(Future.value(ByteData.sublistView(b)));await l.load();}
  int randomColor()=>palette[math.Random().nextInt(palette.length)];
+ Future<void> syncChecklistWidget() async {
+  await checklistWidgetService.sync(
+   boards: boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
+   selectedBoardId: selectedWidgetBoardId,
+   backgroundColor: widgetBackground,
+   fontFamily: widgetFont,
+   itemsFor: (option) {
+    final board=boards.firstWhere((entry)=>entry.id==option.id);
+    return board.items.map((item)=>'${item.done?'✓':'•'} ${item.text}${item.description.trim().isEmpty?'':' — ${item.description}'}').toList();
+   },
+  );
+ }
+ Future<void> selectWidgetChecklist() async {
+  final ctx=appNavigatorKey.currentContext;
+  if(ctx==null)return;
+  final chosen=await checklistWidgetService.selectChecklist(
+   context:ctx,
+   boards:boards.map((board)=>ChecklistWidgetBoardOption(id:board.id,title:board.title,itemCount:board.items.length)).toList(),
+  );
+  if(chosen!=null){
+   selectedWidgetBoardId=chosen;
+   await save();
+   msg('چک‌لیست ویجت به‌روزرسانی شد');
+  }
+ }
  Future<void> pickSliderColor({required String title, required int initial, required ValueChanged<int> onChanged}) async {
   final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   final hsl=HSLColor.fromColor(Color(initial));
@@ -116,6 +145,15 @@ class _AppState extends State<App> {
    Slider(value:inputSize,min:12,max:25,divisions:13,label:inputSize.round().toString(),onChanged:(v){setState(()=>inputSize=v);refresh((){});save();}),
    TextField(style:TextStyle(fontSize:inputSize*15/size,fontFamily:family),decoration:const InputDecoration(hintText:'پیش‌نمایش نوشته ورودی',border:OutlineInputBorder())),
    const Divider(height:28),
+   ChecklistWidgetSettings(
+    selectedChecklistTitle:boards.where((b)=>b.id==selectedWidgetBoardId).firstOrNull?.title??'',
+    backgroundColor:widgetBackground,
+    fontFamily:widgetFont,
+    onSelectChecklist:(){Navigator.pop(c);selectWidgetChecklist();},
+    onChangeBackground:()async{await pickSliderColor(title:'رنگ پس‌زمینه ویجت',initial:widgetBackground,onChanged:(v){widgetBackground=v;});await save();refresh((){});},
+    onFontChanged:(value)async{widgetFont=value;await save();refresh((){});},
+   ),
+   const Divider(height:28),
    const Text('امنیت',style:TextStyle(fontWeight:FontWeight.bold)),
    SwitchListTile(contentPadding:EdgeInsets.zero,value:biometric,title:const Text('قفل اثر انگشت / تشخیص چهره'),subtitle:const Text('هنگام ورود به برنامه احراز هویت انجام می‌شود'),onChanged:(v)async{
     if(v){try{final supported=await auth.isDeviceSupported();final available=await auth.getAvailableBiometrics();if(!supported||available.isEmpty){msg('روی این دستگاه بیومتریک فعال یا قابل استفاده نیست');return;}final ok=await auth.authenticate(localizedReason:'برای فعال‌سازی قفل برنامه احراز هویت کنید',options:const AuthenticationOptions(biometricOnly:true,stickyAuth:true));if(!ok)return;}catch(_){msg('فعال‌سازی بیومتریک ناموفق بود؛ قفل صفحه و مجوزهای دستگاه را بررسی کنید');return;}}
@@ -146,7 +184,7 @@ class _HomeState extends State<Home>{
   widget.owner.msg('برای خروج، دکمه بازگشت را ${4-_backPressCount} بار دیگر پشت سر هم فشار دهید');
  }
  Board? featured;
- @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];}
+ @override void initState(){super.initState();final all=widget.owner.boards;if(all.isNotEmpty)featured=all[math.Random().nextInt(all.length)];ChecklistWidgetService.channel.setMethodCallHandler((call)async{if(call.method=='widgetOpened'&&mounted)await widget.owner.selectWidgetChecklist();});WidgetsBinding.instance.addPostFrameCallback((_)async{try{await widget.owner.syncChecklistWidget();final open=await ChecklistWidgetService.channel.invokeMethod<bool>('consumeWidgetLaunch')??false;if(open&&mounted)await widget.owner.selectWidgetChecklist();}catch(_){}});}
  Future<void> addItem(Board b)async{
   final title=TextEditingController();final description=TextEditingController();final ctx=appNavigatorKey.currentContext;if(ctx==null)return;
   Future<void> commit(BuildContext dialogContext)async{final value=title.text.trim();if(value.isEmpty)return;setState(()=>b.items.add(Item(uid(),value,description:description.text.trim(),color:widget.owner.randomColor())));await widget.owner.save();if(dialogContext.mounted)Navigator.pop(dialogContext);}
@@ -174,7 +212,7 @@ class _HomeState extends State<Home>{
  if(!inside)...o.folders.map((f){final n=o.boards.where((b)=>b.folderId==f.id).length;return InkWell(borderRadius:BorderRadius.circular(18),onTap:()=>setState(()=>folder=f.id),onLongPress:()=>showModalBottomSheet(context:context,builder:(c)=>Wrap(children:[ListTile(leading:const Icon(Icons.edit),title:const Text('ویرایش'),onTap:()async{Navigator.pop(c);final s=await o.pickName('نام پوشه',f.name);if(s!=null&&s.isNotEmpty){setState(()=>f.name=s);o.save();}}),ListTile(leading:const Icon(Icons.delete),title:const Text('حذف پوشه'),onTap:(){Navigator.pop(c);setState((){for(final b in o.boards){if(b.folderId==f.id)b.folderId='';}o.folders.remove(f);});o.save();})])),child:Container(width:double.infinity,margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),border:Border.all(color:Color(f.color).withOpacity(.35))),child:Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:Color(f.color).withOpacity(.15),borderRadius:BorderRadius.circular(14)),child:Icon(Icons.folder_rounded,color:Color(f.color),size:27)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(f.name,style:TextStyle(fontWeight:FontWeight.bold,color:Color(f.color),fontSize:16)),const SizedBox(height:4),Text('$n چک‌لیست',style:const TextStyle(color:Colors.grey,fontSize:12))])),const Icon(Icons.arrow_back_ios_new,size:15,color:Colors.grey)])));}),
  if(!inside)...[const SizedBox(height:22),const Text('چک‌لیست‌های بدون پوشه',style:TextStyle(fontWeight:FontWeight.bold,fontSize:17))],
  if(lists.isEmpty)const Padding(padding:EdgeInsets.all(25),child:Center(child:Text('هنوز چک‌لیستی وجود ندارد'))),
- ...lists.map((b)=>Card(color:Color(b.color).withOpacity(.045),elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:Color(b.color).withOpacity(.28))),margin:const EdgeInsets.only(top:10),clipBehavior:Clip.antiAlias,child:ExpansionTile(tilePadding:const EdgeInsets.symmetric(horizontal:14,vertical:4),childrenPadding:const EdgeInsets.fromLTRB(14,0,14,12),iconColor:Color(b.color),collapsedIconColor:Color(b.color),title:Row(children:[Expanded(child:Text(b.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(b.color)))),PopupMenuButton<String>(onSelected:(v)async{else if(v=='move'){final target=await showModalBottomSheet<String>(context:context,builder:(c)=>SafeArea(child:Wrap(children:[const ListTile(title:Text('انتقال چک‌لیست به')),...[ListTile(leading:const Icon(Icons.inbox_outlined),title:const Text('بدون پوشه'),onTap:()=>Navigator.pop(c,'')),...o.folders.map((f)=>ListTile(leading:Icon(Icons.folder,color:Color(f.color)),title:Text(f.name),onTap:()=>Navigator.pop(c,f.id)))]])));if(target!=null){setState(()=>b.folderId=target);o.save();}}else if(v=='card_color'){await o.pickSliderColor(title:'رنگ کارت چک‌لیست',initial:b.color,onChanged:(value){setState(()=>b.color=value);o.save();});}else if(v=='edit'){final s=await o.pickName('ویرایش نام',b.title);if(s!=null&&s.isNotEmpty){setState(()=>b.title=s);o.save();}}else if(v=='delete'){setState(()=>o.boards.remove(b));o.save();}},itemBuilder:(_)=>[const PopupMenuItem(value:'card_color',child:Row(children:[Icon(Icons.color_lens_outlined,size:19),SizedBox(width:8),Text('تغییر رنگ کارت')])),const PopupMenuItem(value:'move',child:Text('انتقال به پوشه')),const PopupMenuItem(value:'edit',child:Text('ویرایش')),const PopupMenuItem(value:'delete',child:Text('حذف'))])]),subtitle:Text('${b.items.where((i)=>i.done).length} از ${b.items.length} مورد انجام شده',style:const TextStyle(fontSize:12,color:Colors.grey)),children:[if(b.items.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:10),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:b.items.where((i)=>i.done).length/b.items.length,minHeight:5,color:Color(b.color)))),...b.items.map((i)=>CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,controlAffinity:ListTileControlAffinity.leading,value:i.done,title:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[Text(i.text,style:TextStyle(decoration:i.done?TextDecoration.lineThrough:null,color:Color(i.color))),if(i.description.trim().isNotEmpty)Padding(padding:const EdgeInsets.only(top:3),child:Text(i.description,style:TextStyle(fontSize:12,color:Colors.grey.shade700,decoration:i.done?TextDecoration.lineThrough:null))) ]),onChanged:(v){setState(()=>i.done=v??false);o.save();},secondary:IconButton(icon:const Icon(Icons.close,size:18),onPressed:(){setState(()=>b.items.remove(i));o.save();}))),Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:()=>addItem(b),icon:const Icon(Icons.add),label:const Text('افزودن مورد')))])))
+ ...lists.map((b)=>Card(color:Color(b.color).withOpacity(.045),elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:Color(b.color).withOpacity(.28))),margin:const EdgeInsets.only(top:10),clipBehavior:Clip.antiAlias,child:ExpansionTile(tilePadding:const EdgeInsets.symmetric(horizontal:14,vertical:4),childrenPadding:const EdgeInsets.fromLTRB(14,0,14,12),iconColor:Color(b.color),collapsedIconColor:Color(b.color),title:Row(children:[Expanded(child:Text(b.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(b.color)))),PopupMenuButton<String>(onSelected:(v)async{if(v=='move'){final target=await showModalBottomSheet<String>(context:context,builder:(c)=>SafeArea(child:Wrap(children:[const ListTile(title:Text('انتقال چک‌لیست به')),...[ListTile(leading:const Icon(Icons.inbox_outlined),title:const Text('بدون پوشه'),onTap:()=>Navigator.pop(c,'')),...o.folders.map((f)=>ListTile(leading:Icon(Icons.folder,color:Color(f.color)),title:Text(f.name),onTap:()=>Navigator.pop(c,f.id)))]])));if(target!=null){setState(()=>b.folderId=target);o.save();}}else if(v=='card_color'){await o.pickSliderColor(title:'رنگ کارت چک‌لیست',initial:b.color,onChanged:(value){setState(()=>b.color=value);o.save();});}else if(v=='edit'){final s=await o.pickName('ویرایش نام',b.title);if(s!=null&&s.isNotEmpty){setState(()=>b.title=s);o.save();}}else if(v=='delete'){setState(()=>o.boards.remove(b));o.save();}},itemBuilder:(_)=>[const PopupMenuItem(value:'card_color',child:Row(children:[Icon(Icons.color_lens_outlined,size:19),SizedBox(width:8),Text('تغییر رنگ کارت')])),const PopupMenuItem(value:'move',child:Text('انتقال به پوشه')),const PopupMenuItem(value:'edit',child:Text('ویرایش')),const PopupMenuItem(value:'delete',child:Text('حذف'))])]),subtitle:Text('${b.items.where((i)=>i.done).length} از ${b.items.length} مورد انجام شده',style:const TextStyle(fontSize:12,color:Colors.grey)),children:[if(b.items.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:10),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:b.items.where((i)=>i.done).length/b.items.length,minHeight:5,color:Color(b.color)))),...b.items.map((i)=>CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,controlAffinity:ListTileControlAffinity.leading,value:i.done,title:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[Text(i.text,style:TextStyle(decoration:i.done?TextDecoration.lineThrough:null,color:Color(i.color))),if(i.description.trim().isNotEmpty)Padding(padding:const EdgeInsets.only(top:3),child:Text(i.description,style:TextStyle(fontSize:12,color:Colors.grey.shade700,decoration:i.done?TextDecoration.lineThrough:null))) ]),onChanged:(v){setState(()=>i.done=v??false);o.save();},secondary:IconButton(icon:const Icon(Icons.close,size:18),onPressed:(){setState(()=>b.items.remove(i));o.save();}))),Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:()=>addItem(b),icon:const Icon(Icons.add),label:const Text('افزودن مورد')))])))
 
  ])));}
 }
