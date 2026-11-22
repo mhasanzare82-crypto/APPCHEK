@@ -2,11 +2,15 @@ package com.example.exm1
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import org.json.JSONArray
 class ChecklistPickerActivity:Activity(){
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState)
+  window?.setBackgroundDrawableResource(android.R.color.transparent)
+  window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+  window?.attributes=window?.attributes?.apply{dimAmount=0.4f}
   val shared=getSharedPreferences("FlutterSharedPreferences",MODE_PRIVATE)
   val boards=try{JSONArray(shared.getString("flutter.boards","[]")?:"[]")}catch(_:Exception){JSONArray()}
   val labels=ArrayList<String>();val candidates=ArrayList<org.json.JSONObject>()
@@ -18,7 +22,9 @@ class ChecklistPickerActivity:Activity(){
     shared.edit().putString("flutter.selectedWidgetBoardId",b.optString("id","")).apply()
     ChecklistHomeWidgetProvider.showBoard(this,b.optString("title","چک‌لیست"),output);finish()
    }.setNegativeButton("بستن"){_,_->finish()}.create()
-  dlg.setOnDismissListener{if(!isFinishing)finish()};dlg.show()
+  dlg.setOnDismissListener{if(!isFinishing)finish()}
+  dlg.show()
   if(labels.isEmpty())dlg.setMessage("هنوز چک‌لیستی ساخته نشده است. ابتدا داخل برنامه چک‌لیست بساز.")
+  dlg.window?.setLayout((resources.displayMetrics.widthPixels*0.88f).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
  }
 }
