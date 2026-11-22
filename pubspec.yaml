@@ -1,7 +1,7 @@
 name: exm1
 description: Persian checklist manager
 publish_to: 'none'
-version: 1.1.0+2
+version: 1.1.1+3
 environment:
   sdk: ^3.11.0
   flutter: ">=3.41.0"
